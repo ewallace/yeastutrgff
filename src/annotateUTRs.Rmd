@@ -1,0 +1,233 @@
+---
+title: "Annotate S288C UTRs from Pelechano 2013 data"
+author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
+date: "22 March 2020"
+output: 
+    html_document:
+        toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+```
+
+# Functions to read, write, manipulate gffs
+
+```{r read_functions}
+read_gff <- function(file){
+    # tidyverse read gff function from rmonad vignette
+    # https://cran.r-project.org/web/packages/rmonad/vignettes/gff-processing.html
+    
+    readr::read_tsv(
+        file,
+        col_names = c(
+            "Seqid",
+            "Source",
+            "Type",
+            "Start",
+            "End",
+            "Score",
+            "Strand",
+            "Phase",
+            "Attr"
+        ),
+        na        = ".",
+        comment   = "#",
+        col_types = "ccciidcic"
+    )
+}
+
+write_gff <- function(x,path,...) {
+    x %>%
+        ungroup %>%
+        select(Seqid,Source,Type,Start,End,Score,Strand,Phase,Attr) %>%
+        write_tsv(path=path,...)
+}
+
+gene_from_attr <- function(attr_string,
+                           before="Name=",gene_str="[\\w-]+",after="_") {
+    # pull a gene name from an attribute string
+    match_str = paste0(before,gene_str,after)
+    attr_string %>%
+        str_extract(match_str) %>%
+        str_remove(before) %>%
+        str_remove(after)
+}
+# test_bit <- gff_CDS$attr[1]
+# gene_from_attr(test_bit)
+
+assign_5UTR <- function(gff_join_row,defaultlength=25) {
+    Attr.tx <- pull(gff_join_row,Attr.tx)
+    if( !is.na(Attr.tx) ) {
+        Attr.UTR <- Attr.tx %>%
+            str_extract("ID=[\\w-_]+") %>%
+            str_remove("ID=") %>% 
+            paste0("ID=",.,"_5UTR;Parent=",.) 
+    } else {
+        Attr.UTR <- pull(gff_join_row,Gene) %>%
+            paste0("ID=",.,"_",defaultlength,"nt_5UTR") 
+    }
+    Strand <- pull(gff_join_row,Strand)
+    if( Strand == "+" ) {
+        Start.UTR <- pull(gff_join_row,Start.tx)
+        if( is.na(Start.UTR) ) {
+            Start.UTR <- pull(gff_join_row,Start.CDS) - defaultlength
+        }
+        End.UTR <- pull(gff_join_row,Start.CDS) - 1
+    } else if( Strand == "-" ) {
+        Start.UTR <- pull(gff_join_row,End.CDS) + 1
+        End.UTR <- pull(gff_join_row,End.tx)
+        if( is.na(End.UTR) ) {
+            End.UTR <- pull(gff_join_row,End.CDS) + defaultlength
+        }
+    }
+    tibble( Gene=pull(gff_join_row,Gene),
+            Seqid=pull(gff_join_row,Seqid),
+            Source=pull(gff_join_row,Seqid),
+            Type="five_prime_UTR",
+            Start=Start.UTR,
+            End=End.UTR,
+            Score=NA,
+            Strand=Strand,
+            Phase=NA,
+            Attr=Attr.UTR)
+}
+
+assign_3UTR <- function(gff_join_row,defaultlength=125) {
+    Attr.tx <- pull(gff_join_row,Attr.tx)
+    if( !is.na(Attr.tx) ) {
+        Attr.UTR <- Attr.tx %>%
+            str_extract("ID=[\\w-_]+") %>%
+            str_remove("ID=") %>% 
+            paste0("ID=",.,"_3UTR;Parent=",.) 
+    } else {
+        Attr.UTR <- pull(gff_join_row,Gene) %>%
+            paste0("ID=",.,"_",defaultlength,"nt_3UTR") 
+    }
+    Strand <- pull(gff_join_row,Strand)
+    if( Strand == "-" ) {
+        Start.UTR <- pull(gff_join_row,Start.tx)
+        if( is.na(Start.UTR) ) {
+            Start.UTR <- pull(gff_join_row,Start.CDS) - defaultlength
+        }
+        End.UTR <- pull(gff_join_row,Start.CDS) - 1
+    } else if( Strand == "+" ) {
+        Start.UTR <- pull(gff_join_row,End.CDS) + 1
+        End.UTR <- pull(gff_join_row,End.tx)
+        if( is.na(End.UTR) ) {
+            End.UTR <- pull(gff_join_row,End.CDS) + defaultlength
+        }
+    }
+    tibble( Gene=pull(gff_join_row,Gene),
+            Seqid=pull(gff_join_row,Seqid),
+            Source=pull(gff_join_row,Seqid),
+            Type="three_prime_UTR",
+            Start=Start.UTR,
+            End=End.UTR,
+            Score=NA,
+            Strand=Strand,
+            Phase=NA,
+            Attr=Attr.UTR)
+}
+```
+
+# Load data from gffs
+
+```{r load_gffs}
+gff_CDS <- 
+    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
+    read_gff() %>% 
+    filter(Type=="CDS") %>%
+    mutate(Gene = gene_from_attr(Attr)) 
+
+gff_5pintrons <- 
+    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
+    read_gff() %>% 
+    filter(Type=="five_prime_UTR_intron") %>%
+    mutate(Gene = gene_from_attr(Attr)) 
+
+gff_txs <- 
+    here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
+    read_gff() %>%
+    mutate(Gene = gene_from_attr(Attr,before="ID=")) 
+```
+
+
+# Join CDS annotation
+
+```{r gff_join,dependson="load_gffs"}
+
+# create the primary transcript region 
+# only for nuclear verified ORFs
+# this should differ only for CDS introns.
+gff_verCDSunion <- 
+    gff_CDS %>%
+    filter( Seqid != "chrmt", str_detect(Attr,"Verified")) %>%
+    group_by(Gene) %>%
+    summarize(Seqid=Seqid[1],
+              Source=Source[1],
+              Type="primary_transcript_region",
+              Start=min(Start),End=max(End),
+              Score=Score[1],
+              Strand=Strand[1],
+              Phase=NA,
+              Attr=Attr[1])
+
+gff_join_vCDS_txs <- 
+    gff_verCDSunion %>%
+    left_join(select(gff_txs, Gene, Seqid, Start, End, Strand,Attr),
+              by=c("Gene","Seqid","Strand"), suffix=c(".CDS",".tx")) 
+```
+
+# Assign 5' UTRs, although keeping introns
+
+There are 24 annotated 5'UTR introns in R64-2-1 which would ideally be removed from 5'UTRs. First, we keep them.
+
+```{r gff_5UTRs_keepintrons,dependson="gff_join"}
+gff_5UTRs_keepintrons <- 
+    gff_join_vCDS_txs %>%
+    group_by(Gene) %>%
+    do(assign_5UTR(.))  %>%
+    ungroup %>%
+    mutate(Source="yeastutrgff")
+
+outfile_5UTRs_keepintrons <- here::here("out","longest_five_prime_UTRs_keepintrons.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_5UTRs_keepintrons)
+
+write_gff(x=gff_5UTRs_keepintrons,
+          path=outfile_5UTRs_keepintrons,
+          append=TRUE)
+```
+
+# Assign 3' UTRs
+
+```{r gff_3UTRs,dependson="gff_join"}
+gff_3UTRs <- 
+    gff_join_vCDS_txs %>%
+    group_by(Gene) %>%
+    do(assign_3UTR(.)) %>%
+    ungroup %>%
+    mutate(Source="yeastutrgff")
+
+outfile_3UTRs <- here::here("out","longest_three_prime_UTRs.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_3UTRs)
+
+write_gff(x=gff_3UTRs,
+          path=outfile_3UTRs,
+          append=TRUE)
+```
+
+
