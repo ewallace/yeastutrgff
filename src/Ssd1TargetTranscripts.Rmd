@@ -1,0 +1,88 @@
+---
+title: "Subset transcript sequences for Ssd1 targets"
+author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
+date: "24 March 2020"
+output: 
+    html_document:
+        toc: true
+---
+
+A script to get transcripts targeted by Ssd1 from published data, then separate their transcript targets and do motif analysis on them.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(Biostrings)
+library(here)
+```
+
+```{r load_txs}
+txs_fasta <- 
+    Biostrings::readDNAStringSet(
+        here::here("out",
+                   "longest_full-ORF_transcripts_keepintrons_ypd.fasta")
+    )
+names(txs_fasta) <- 
+    names(txs_fasta) %>% 
+    str_remove("_.*") 
+```
+
+
+# Lists of mRNAs enriched in Ssd1 binding
+
+## Hogan 2008
+
+Reading data from Hogan 2008 `https://doi.org/10.1371/journal.pbio.0060255.sd003`.
+
+```{r Hogan}
+# hoganFDRsall <- 
+#     here::here("data","Ssd1_targets","Hogan2008_FDR_Dataset_S2.txt") %>%
+#     read_tsv(comment="#")
+# 
+# hoganFDRsall
+
+ssd1_data_hogan2008 <-
+    here::here("data","Ssd1_targets",
+               "journal.pbio.0060255.sd003_Hogan2008_Dataset_S3.xls") %>%
+    readxl::read_excel("Ssd1_sam",skip=1,
+                       col_names = c("Gene",
+                                     "Score",
+                                     "Numerator",
+                                     "Denominator",
+                                     "FoldChange",
+                                     "qvalue",
+                                     "localfdr")
+    )
+
+ssd1_targets_hogan2008 <- 
+    ssd1_data_hogan2008 %>%
+    filter(str_detect(Gene,"_ORF"),localfdr < 1) %>%
+    pull(Gene) %>%
+    str_remove("_.*") %>%
+    unique
+```
+
+# Sequences
+
+## Hogan 2008 target seqs
+
+```{r Hogan_seqs}
+ssd1_targets_hogan2008_woseqs <- setdiff(ssd1_targets_hogan2008,names(txs_fasta))
+
+ssd1_targets_hogan2008_seqs <-
+    txs_fasta[intersect(ssd1_targets_hogan2008,names(txs_fasta))]
+
+writeXStringSet(ssd1_targets_hogan2008_seqs,
+                here::here(
+                    "out","Ssd1_targets",
+                    "ssd1_targets_hogan2008_localfdr5_longesttxseqs.fasta"))
+```
+
+The following Ssd1 targets are not in the list of transcript sequences:
+
+`r print(ssd1_targets_hogan2008_woseqs)`
+
+That suggests that we should make educated guesses for those UTRs.
+
