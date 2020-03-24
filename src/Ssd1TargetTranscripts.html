@@ -373,9 +373,11 @@ summary {
 <ul>
 <li><a href="#lists-of-mrnas-enriched-in-ssd1-binding">Lists of mRNAs enriched in Ssd1 binding</a><ul>
 <li><a href="#hogan-2008">Hogan 2008</a></li>
-</ul></li>
-<li><a href="#sequences">Sequences</a><ul>
 <li><a href="#hogan-2008-target-seqs">Hogan 2008 target seqs</a></li>
+<li><a href="#jansen-2009">Jansen 2009</a></li>
+<li><a href="#jansen-2009-target-seqs">Jansen 2009 target seqs</a></li>
+<li><a href="#hose-2020">Hose 2020</a></li>
+<li><a href="#hose-2020_seqs">Hose 2020_seqs</a></li>
 </ul></li>
 </ul>
 </div>
@@ -413,16 +415,28 @@ ssd1_data_hogan2008 &lt;-
                                      &quot;localfdr&quot;)
     )
 
-ssd1_targets_hogan2008 &lt;- 
+ssd1_data_hogan2008</code></pre>
+<pre><code>## # A tibble: 5,044 x 7
+##    Gene              Score Numerator Denominator FoldChange qvalue localfdr
+##    &lt;chr&gt;             &lt;dbl&gt;     &lt;dbl&gt;       &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+##  1 YKL101W_ORF       12.8       4.75       0.371      32.8       0  6.47e-4
+##  2 YJL158C_ORF       12.1       3.51       0.289      12.0       0  7.56e-5
+##  3 YNL239W_ORF       12.0       2.77       0.232       7.12      0  0.     
+##  4 YCL051W_ORF       10.4       2.67       0.256       6.92      0  0.     
+##  5 YOR383C_ORF        8.97      2.92       0.326       8.36      0  6.22e-3
+##  6 YJL158C_AAA_29_N…  8.85      3.35       0.378      10.9       0  9.45e-3
+##  7 YNL066W_ORF        8.12      4.87       0.599      46.8       0  4.50e-2
+##  8 YLR190W_ORF        7.99      3.12       0.391      10.2       0  5.34e-2
+##  9 YGR014W_ORF        7.65      2.03       0.265       4.33      0  7.66e-2
+## 10 YOR383C_OCH__ORF   7.29      2.84       0.390       8.70      0  9.58e-2
+## # … with 5,034 more rows</code></pre>
+<pre class="r"><code>ssd1_targets_hogan2008 &lt;- 
     ssd1_data_hogan2008 %&gt;%
     filter(str_detect(Gene,&quot;_ORF&quot;),localfdr &lt; 1) %&gt;%
     pull(Gene) %&gt;%
     str_remove(&quot;_.*&quot;) %&gt;%
     unique</code></pre>
 </div>
-</div>
-<div id="sequences" class="section level1">
-<h1>Sequences</h1>
 <div id="hogan-2008-target-seqs" class="section level2">
 <h2>Hogan 2008 target seqs</h2>
 <pre class="r"><code>ssd1_targets_hogan2008_woseqs &lt;- setdiff(ssd1_targets_hogan2008,names(txs_fasta))
@@ -435,7 +449,136 @@ writeXStringSet(ssd1_targets_hogan2008_seqs,
                     &quot;out&quot;,&quot;Ssd1_targets&quot;,
                     &quot;ssd1_targets_hogan2008_localfdr5_longesttxseqs.fasta&quot;))</code></pre>
 <p>The following Ssd1 targets are not in the list of transcript sequences:</p>
+<pre class="r"><code>ssd1_targets_hogan2008_woseqs</code></pre>
+<pre><code>## [1] &quot;YKL101W&quot;   &quot;YER138W-A&quot; &quot;YGL178W&quot;   &quot;YDR270W&quot;   &quot;YOR247W&quot;   &quot;YDR326C&quot;</code></pre>
 <p>That suggests that we should make educated guesses for those UTRs.</p>
+</div>
+<div id="jansen-2009" class="section level2">
+<h2>Jansen 2009</h2>
+<p>Reading data from Jansen 2009.</p>
+<p>Surprisingly, the gene systematic names in this table are not completely systematic.</p>
+<pre class="r"><code>ssd1_data_jansen2009 &lt;-
+    here::here(&quot;data&quot;,&quot;Ssd1_targets&quot;,
+               &quot;NIHMS158901-supplement-02.xls&quot;) %&gt;%
+    readxl::read_excel(sheet=1)
+
+ssd1_data_jansen2009 </code></pre>
+<pre><code>## # A tibble: 172 x 23
+##    ProbeID Sequence PerfectHits chrom start end   `Score(d)` `Numerator(r)`
+##    &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;      &lt;dbl&gt;          &lt;dbl&gt;
+##  1 SC5p.Y… TACCGCG…           1 chr14 5015… 5016…      15.3            7.70
+##  2 SC5p.Y… CAGAAAT…           1 chr11 2501… 2502…       4.78           7.59
+##  3 SC5p.Y… CGGTATC…           1 chr11 2520… 2521…       4.43           7.51
+##  4 SC5p.Y… TTTTGAA…           1 chr12 5354… 5355…       6.94           7.18
+##  5 SCorf.… GGACATT…           1 chr3  36821 36890       6.20           6.12
+##  6 SCint.… TCAATTA…           1 chr11 5203… 5204…       4.15           5.84
+##  7 SCint.… GTATCCC…           1 chr7  2003… 2004…       4.46           5.61
+##  8 YKL101… TTGTAAA…           1 chr11 2529… 2530…       4.47           5.54
+##  9 SCorf.… ACACATT…           1 chr3  36598 36667       4.65           5.50
+## 10 YLR190… GTTGCTT…           1 chr12 5365… 5366…       6.93           5.40
+## # … with 162 more rows, and 15 more variables: `Denominator(s+s0)` &lt;dbl&gt;,
+## #   `Fold Change` &lt;dbl&gt;, `q-value(%)` &lt;dbl&gt;, `localfdr(%)` &lt;dbl&gt;,
+## #   strand &lt;chr&gt;, `inter/genic?` &lt;chr&gt;, `gene name` &lt;chr&gt;, sys_id &lt;chr&gt;,
+## #   `probe strand` &lt;chr&gt;, `left_gene sys id` &lt;chr&gt;, `left gene
+## #   name` &lt;chr&gt;, left_gene_dist &lt;chr&gt;, `right_gene sys id` &lt;chr&gt;, `right
+## #   gene name` &lt;chr&gt;, right_gene_dist &lt;chr&gt;</code></pre>
+<pre class="r"><code># Here we have to take some effort to get systematic names for all targets
+ssd1_genic_targets_jansen2009 &lt;- 
+    ssd1_data_jansen2009 %&gt;%
+    filter(`inter/genic?`==&quot;genic&quot;) %&gt;%
+    pull(sys_id)
+
+ssd1_intergenic_targets_jansen2009 &lt;- 
+    c(ssd1_data_jansen2009 %&gt;%
+          filter(`inter/genic?`!=&quot;genic&quot;,`sys_id`==`left gene name`) %&gt;%
+          pull(`left_gene sys id`),
+      ssd1_data_jansen2009 %&gt;%
+          filter(`inter/genic?`!=&quot;genic&quot;,`sys_id`==`right gene name`) %&gt;%
+          pull(`right_gene sys id`)
+    )
+
+ssd1_targets_jansen2009 &lt;- unique( c(ssd1_genic_targets_jansen2009,
+                                     ssd1_intergenic_targets_jansen2009) )</code></pre>
+</div>
+<div id="jansen-2009-target-seqs" class="section level2">
+<h2>Jansen 2009 target seqs</h2>
+<pre class="r"><code>ssd1_targets_jansen2009_woseqs &lt;- setdiff(ssd1_targets_jansen2009,names(txs_fasta))
+
+ssd1_targets_jansen2009_seqs &lt;-
+    txs_fasta[intersect(ssd1_targets_jansen2009,names(txs_fasta))]
+
+writeXStringSet(ssd1_targets_jansen2009_seqs,
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_jansen2009_localfdr5_longesttxseqs.fasta&quot;))</code></pre>
+<p>The following Ssd1 targets are not in the list of transcript sequences:</p>
+<pre class="r"><code>ssd1_targets_jansen2009_woseqs</code></pre>
+<pre><code>##  [1] &quot;YKL101W&quot;   &quot;YLR106C&quot;   &quot;YAR050W&quot;   &quot;BUD25&quot;     &quot;YLR318W&quot;  
+##  [6] &quot;YOR247W&quot;   &quot;YHR145C&quot;   &quot;YPL119C&quot;   &quot;YDR457W&quot;   &quot;YKL221W&quot;  
+## [11] &quot;YKL124W&quot;   &quot;YHR004C&quot;   &quot;YBL004W&quot;   &quot;YNL329C&quot;   &quot;YML084W&quot;  
+## [16] &quot;YNL093W&quot;   &quot;YDR327W&quot;   &quot;YCL024W&quot;   &quot;YNR016C&quot;   &quot;YNL297C&quot;  
+## [21] &quot;YMR317W&quot;   &quot;YCL001W-B&quot; &quot;YGR249W&quot;   &quot;YOR350C&quot;   &quot;YDR122W&quot;  
+## [26] &quot;YLR086W&quot;   &quot;YCR093W&quot;   &quot;YLR305C&quot;   &quot;YKL038W&quot;   &quot;YHL041W&quot;  
+## [31] &quot;YMR323W&quot;   &quot;YOR113W&quot;   &quot;YNL210W&quot;   &quot;YNL257C&quot;</code></pre>
+<p>That suggests that we should make educated guesses for those UTRs.</p>
+</div>
+<div id="hose-2020" class="section level2">
+<h2>Hose 2020</h2>
+<pre class="r"><code>ssd1_data_hose2020 &lt;-
+    here::here(&quot;data&quot;,&quot;Ssd1_targets&quot;,
+               &quot;elife-52063-supp2-v2_Hose2020.xlsx&quot;) %&gt;%
+    readxl::read_excel(range = &quot;A2:E6715&quot;,
+                       col_names = c(&quot;Gene&quot;,
+                                     &quot;Annotation&quot;,
+                                     &quot;Bound&quot;,
+                                     &quot;RNA_DE&quot;,
+                                     &quot;Prot_DE&quot;)
+    )
+
+ssd1_data_hose2020</code></pre>
+<pre><code>## # A tibble: 6,714 x 5
+##    Gene    Annotation                                  Bound RNA_DE Prot_DE
+##    &lt;chr&gt;   &lt;chr&gt;                                       &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;  
+##  1 YBR162C YBR162C    ...    TOS1    biological proce… yes   .      yes    
+##  2 YDL055C YDL055C    ...    PSA1    protein amino ac… yes   .      yes    
+##  3 YFR033C YFR033C    ...    QCR6    aerobic respirat… yes   .      yes    
+##  4 YGR282C &quot;YGR282C    ...    BGL2    cell wall organ… yes   .      yes    
+##  5 YIL123W YIL123W    ...    SIM1    microtubule cyto… yes   yes    yes    
+##  6 YJL158C YJL158C    ...    CIS3    cell wall organi… yes   yes    yes    
+##  7 YJL159W YJL159W    ...    HSP150    cell wall orga… yes   .      yes    
+##  8 YKL101W YKL101W    ...    HSL1    protein amino ac… yes   .      yes    
+##  9 YKR042W YKR042W    ...    UTH1    mitochondrion or… yes   .      yes    
+## 10 YLR110C YLR110C    ...    CCW12    cell wall organ… yes   .      yes    
+## # … with 6,704 more rows</code></pre>
+<pre class="r"><code>ssd1_targets_hose2020 &lt;- 
+    ssd1_data_hose2020 %&gt;%
+    filter(Bound==&quot;yes&quot;) %&gt;%
+    pull(Gene)</code></pre>
+</div>
+<div id="hose-2020_seqs" class="section level2">
+<h2>Hose 2020_seqs</h2>
+<pre class="r"><code>ssd1_targets_hose2020_woseqs &lt;- setdiff(ssd1_targets_hose2020,names(txs_fasta))
+
+ssd1_targets_hose2020_seqs &lt;-
+    txs_fasta[intersect(ssd1_targets_hose2020,names(txs_fasta))]
+
+writeXStringSet(ssd1_targets_hose2020_seqs,
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_hose2020_fdr5_longesttxseqs.fasta&quot;))</code></pre>
+<p>The following Ssd1 targets are not in the list of transcript sequences:</p>
+<pre class="r"><code>ssd1_targets_hose2020_woseqs</code></pre>
+<pre><code>##  [1] &quot;YKL101W&quot;   &quot;YML016C&quot;   &quot;YDR085C&quot;   &quot;YDL085W&quot;   &quot;YLL021W&quot;  
+##  [6] &quot;YGR079W&quot;   &quot;YGR087C&quot;   &quot;YLR177W&quot;   &quot;YLR383W&quot;   &quot;YML081W&quot;  
+## [11] &quot;YML046W&quot;   &quot;YPL186C&quot;   &quot;YDR150W&quot;   &quot;YKR028W&quot;   &quot;YMR304C-A&quot;
+## [16] &quot;YIL144W&quot;   &quot;YFL050C&quot;   &quot;YOR227W&quot;   &quot;YIL147C&quot;   &quot;YML017W&quot;  
+## [21] &quot;YOR329C&quot;   &quot;YJL129C&quot;   &quot;YGL021W&quot;   &quot;YDL231C&quot;   &quot;YDR134C&quot;  
+## [26] &quot;YDR420W&quot;   &quot;YHR073W&quot;   &quot;YDR334W&quot;   &quot;YKR054C&quot;   &quot;YPL075W&quot;  
+## [31] &quot;YBL052C&quot;   &quot;YOR191W&quot;   &quot;YLR067C&quot;   &quot;YHR080C&quot;   &quot;YNL076W&quot;  
+## [36] &quot;YLR227C&quot;   &quot;YPR087W&quot;   &quot;YGR170W&quot;   &quot;YGL178W&quot;   &quot;YBR293W&quot;  
+## [41] &quot;YJR089W&quot;   &quot;YOR247W&quot;   &quot;YDL173W&quot;   &quot;YMR316C-A&quot; &quot;YDR464W&quot;  
+## [46] &quot;YMR031C&quot;   &quot;YGL094C&quot;   &quot;YCR033W&quot;   &quot;YBR208C&quot;   &quot;YBL067C&quot;  
+## [51] &quot;YLR206W&quot;   &quot;YMR172W&quot;   &quot;YPL174C&quot;</code></pre>
 </div>
 </div>
 

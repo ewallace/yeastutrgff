@@ -36,7 +36,7 @@ names(txs_fasta) <-
 
 Reading data from Hogan 2008 `https://doi.org/10.1371/journal.pbio.0060255.sd003`.
 
-```{r Hogan}
+```{r Hogan_targets}
 # hoganFDRsall <- 
 #     here::here("data","Ssd1_targets","Hogan2008_FDR_Dataset_S2.txt") %>%
 #     read_tsv(comment="#")
@@ -56,6 +56,8 @@ ssd1_data_hogan2008 <-
                                      "localfdr")
     )
 
+ssd1_data_hogan2008
+
 ssd1_targets_hogan2008 <- 
     ssd1_data_hogan2008 %>%
     filter(str_detect(Gene,"_ORF"),localfdr < 1) %>%
@@ -64,11 +66,9 @@ ssd1_targets_hogan2008 <-
     unique
 ```
 
-# Sequences
-
 ## Hogan 2008 target seqs
 
-```{r Hogan_seqs}
+```{r Hogan_seqs,dependson="Hogan_targets"}
 ssd1_targets_hogan2008_woseqs <- setdiff(ssd1_targets_hogan2008,names(txs_fasta))
 
 ssd1_targets_hogan2008_seqs <-
@@ -82,7 +82,107 @@ writeXStringSet(ssd1_targets_hogan2008_seqs,
 
 The following Ssd1 targets are not in the list of transcript sequences:
 
-`r print(ssd1_targets_hogan2008_woseqs)`
+```{r dependson="Hogan_seqs"}
+ssd1_targets_hogan2008_woseqs
+```
 
 That suggests that we should make educated guesses for those UTRs.
 
+
+## Jansen 2009
+
+Reading data from Jansen 2009.
+
+Surprisingly, the gene systematic names in this table are not completely systematic.
+
+```{r Jansen_targets}
+
+ssd1_data_jansen2009 <-
+    here::here("data","Ssd1_targets",
+               "NIHMS158901-supplement-02.xls") %>%
+    readxl::read_excel(sheet=1)
+
+ssd1_data_jansen2009 
+
+# Here we have to take some effort to get systematic names for all targets
+ssd1_genic_targets_jansen2009 <- 
+    ssd1_data_jansen2009 %>%
+    filter(`inter/genic?`=="genic") %>%
+    pull(sys_id)
+
+ssd1_intergenic_targets_jansen2009 <- 
+    c(ssd1_data_jansen2009 %>%
+          filter(`inter/genic?`!="genic",`sys_id`==`left gene name`) %>%
+          pull(`left_gene sys id`),
+      ssd1_data_jansen2009 %>%
+          filter(`inter/genic?`!="genic",`sys_id`==`right gene name`) %>%
+          pull(`right_gene sys id`)
+    )
+
+ssd1_targets_jansen2009 <- unique( c(ssd1_genic_targets_jansen2009,
+                                     ssd1_intergenic_targets_jansen2009) )
+```
+
+## Jansen 2009 target seqs
+
+```{r Jansen_seqs,dependson="Jansen_targets"}
+ssd1_targets_jansen2009_woseqs <- setdiff(ssd1_targets_jansen2009,names(txs_fasta))
+
+ssd1_targets_jansen2009_seqs <-
+    txs_fasta[intersect(ssd1_targets_jansen2009,names(txs_fasta))]
+
+writeXStringSet(ssd1_targets_jansen2009_seqs,
+                here::here(
+                    "out","Ssd1_targets",
+                    "ssd1_targets_jansen2009_localfdr5_longesttxseqs.fasta"))
+```
+
+The following Ssd1 targets are not in the list of transcript sequences:
+
+```{r dependson="Jansen_seqs"}
+ssd1_targets_jansen2009_woseqs
+```
+
+That suggests that we should make educated guesses for those UTRs.
+
+## Hose 2020
+
+```{r Hose_targets}
+ssd1_data_hose2020 <-
+    here::here("data","Ssd1_targets",
+               "elife-52063-supp2-v2_Hose2020.xlsx") %>%
+    readxl::read_excel(range = "A2:E6715",
+                       col_names = c("Gene",
+                                     "Annotation",
+                                     "Bound",
+                                     "RNA_DE",
+                                     "Prot_DE")
+    )
+
+ssd1_data_hose2020
+
+ssd1_targets_hose2020 <- 
+    ssd1_data_hose2020 %>%
+    filter(Bound=="yes") %>%
+    pull(Gene)
+```
+
+## Hose 2020_seqs
+
+```{r Hose_seqs,dependson="Hose_targets"}
+ssd1_targets_hose2020_woseqs <- setdiff(ssd1_targets_hose2020,names(txs_fasta))
+
+ssd1_targets_hose2020_seqs <-
+    txs_fasta[intersect(ssd1_targets_hose2020,names(txs_fasta))]
+
+writeXStringSet(ssd1_targets_hose2020_seqs,
+                here::here(
+                    "out","Ssd1_targets",
+                    "ssd1_targets_hose2020_fdr5_longesttxseqs.fasta"))
+```
+
+The following Ssd1 targets are not in the list of transcript sequences:
+
+```{r dependson="Hose_seqs"}
+ssd1_targets_hose2020_woseqs
+```
