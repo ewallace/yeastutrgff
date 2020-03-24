@@ -1,0 +1,67 @@
+---
+title: "Get sequences from Pelechano 2013 annotated transcripts etc."
+author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
+date: "24 March 2020"
+output: 
+    html_document:
+        toc: true
+---
+
+A script to get sequences of transcripts, UTRs, etc, mentioned in `annotateUTRs.Rmd`
+
+# Try with bedtools; works on seqs but not on names
+
+```{bash bedtools_txfasta, eval=FALSE}
+bedtools getfasta -s -fullHeader \
+-fi ../data/saccharomyces_cerevisiae_R64-2-1_20150113_chrnames.fsa \
+-bed ../data/longest_full-ORF_transcripts_ypd.gff3 \
+-fo ../out/longest_full-ORF_transcripts_keepintrons_ypd_getfasta.fasta
+```
+
+# Try with bioconductor
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(Biostrings)
+library(rtracklayer)
+# library(Rsamtools)
+library(magrittr)
+library(here)
+```
+
+## Load genome fasta
+
+```{r load_genome}
+
+Scer_fastafile <- 
+    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113_chrnames.fsa")
+
+Scer_FaFile <- Rsamtools::FaFile(Scer_fastafile)
+Scer_fasta <- 
+    Biostrings::readDNAStringSet(Scer_fastafile)
+```
+
+## Get transcript sequences
+
+```{r longest_tx_seqs,dependson="load_genome"}
+granges_txs <- 
+    here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
+    rtracklayer::readGFFAsGRanges() 
+
+seqs_txs <- Biostrings::getSeq(Scer_FaFile,granges_txs) %>%
+    set_names(granges_txs$ID)
+
+Biostrings::writeXStringSet(
+    seqs_txs, 
+    here::here("out",
+               "longest_full-ORF_transcripts_keepintrons_ypd.fasta")
+)
+```
+
+
+# To do:
+
+* Make transcripts with introns removed?
+* Make a version with just spliced 5'UTRs?
+

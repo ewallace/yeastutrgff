@@ -1,7 +1,7 @@
 ---
 title: "Annotate S288C UTRs from Pelechano 2013 data"
 author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
-date: "22 March 2020"
+date: "24 March 2020"
 output: 
     html_document:
         toc: true
@@ -229,5 +229,12 @@ write_gff(x=gff_3UTRs,
           path=outfile_3UTRs,
           append=TRUE)
 ```
+
+# To Do
+
+* Remove introns from 5'UTRs
+* Make approximate txs with introns removed?
+* Update annotation for Ssd1 genome browser figures
+* Count Ssd1 reads on different kinds of features
 
 

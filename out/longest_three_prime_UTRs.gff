@@ -1,6 +1,6 @@
 ##gff-version 3
 ##source-version yeastutrgff
-##date 2020-03-22
+##date 2020-03-24
 chrI	yeastutrgff	three_prime_UTR	147469	147593	NA	-	NA	ID=YAL001C_125nt_3UTR
 chrI	yeastutrgff	three_prime_UTR	147532	147656	NA	+	NA	ID=YAL002W_125nt_3UTR
 chrI	yeastutrgff	three_prime_UTR	143161	143496	NA	+	NA	ID=YAL003W_id003_3UTR;Parent=YAL003W_id003

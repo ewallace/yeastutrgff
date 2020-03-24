@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Edward Wallace, Edward.Wallace@ed.ac.uk" />
 
-<meta name="date" content="2020-03-22" />
+<meta name="date" content="2020-03-24" />
 
 <title>Annotate S288C UTRs from Pelechano 2013 data</title>
 
@@ -271,7 +270,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -333,6 +331,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -366,7 +365,7 @@ summary {
 
 <h1 class="title toc-ignore">Annotate S288C UTRs from Pelechano 2013 data</h1>
 <h4 class="author">Edward Wallace, <a href="mailto:Edward.Wallace@ed.ac.uk" class="email">Edward.Wallace@ed.ac.uk</a></h4>
-<h4 class="date">22 March 2020</h4>
+<h4 class="date">24 March 2020</h4>
 
 </div>
 
@@ -377,6 +376,7 @@ summary {
 <li><a href="#join-cds-annotation">Join CDS annotation</a></li>
 <li><a href="#assign-5-utrs-although-keeping-introns">Assign 5’ UTRs, although keeping introns</a></li>
 <li><a href="#assign-3-utrs">Assign 3’ UTRs</a></li>
+<li><a href="#to-do">To Do</a></li>
 </ul>
 </div>
 
@@ -598,6 +598,15 @@ write_lines(
 write_gff(x=gff_3UTRs,
           path=outfile_3UTRs,
           append=TRUE)</code></pre>
+</div>
+<div id="to-do" class="section level1">
+<h1>To Do</h1>
+<ul>
+<li>Remove introns from 5’UTRs</li>
+<li>Make approximate txs with introns removed?</li>
+<li>Update annotation for Ssd1 genome browser figures</li>
+<li>Count Ssd1 reads on different kinds of features</li>
+</ul>
 </div>
 
 
