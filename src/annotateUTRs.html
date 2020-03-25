@@ -379,7 +379,10 @@ summary {
 <li><a href="#assign-5-utrs-although-keeping-introns">Assign 5’ UTRs, although keeping introns</a></li>
 <li><a href="#assign-3-utrs">Assign 3’ UTRs</a><ul>
 <li><a href="#remove-introns-from-5utrs-using-bedtools">Remove introns from 5’UTRs using bedtools</a></li>
-<li><a href="#remove-introns-from-5utrs-with-a-homemade-tidyverse-function">Remove introns from 5’UTRs with a homemade tidyverse function</a></li>
+</ul></li>
+<li><a href="#cdss-with-default-length-25nt-5utrs-and-125nt-3utrs">CDSs with default-length 25nt 5UTRs and 125nt 3’UTRs</a><ul>
+<li><a href="#now-make-transcripts-which-are-longest-if-we-have-data-fixed-length-if-we-dont">Now make transcripts which are longest if we have data, fixed-length if we don’t</a></li>
+<li><a href="#remove-introns-from-cds">Remove introns from CDS?</a></li>
 </ul></li>
 <li><a href="#to-do">To Do</a></li>
 </ul>
@@ -502,6 +505,52 @@ assign_3UTR &lt;- function(gff_join_row,defaultlength=125) {
             Strand=Strand,
             Phase=NA,
             Attr=Attr.UTR)
+}
+
+extend_feature &lt;- function(gff_base,IDextl=&quot;ID=&quot;,IDextr=&quot;_ext&quot;,
+                           ext5prime=25,ext3prime=125,extunstranded=0,
+                           type=&quot;extension&quot;) {
+    # extends a stranded feature in a gff_base by defined amounts
+    # assumes there is a &quot;Gene&quot; column for ID, not ideal. 
+    # This is very slow, maybe worth profiling?
+    Strand &lt;- pull(gff_base,Strand)
+    if( Strand == &quot;+&quot; ) {
+        Start &lt;- pull(gff_base,Start) - ext5prime
+        End   &lt;- pull(gff_base,End)   + ext3prime
+    } else if( Strand == &quot;-&quot; ) {
+        Start &lt;- pull(gff_base,Start) - ext3prime
+        End   &lt;- pull(gff_base,End)   + ext5prime
+    } else {
+        Start &lt;- pull(gff_base,Start) - extunstranded
+        End   &lt;- pull(gff_base,End)   + extunstranded
+    }
+    tibble( Gene=pull(gff_base,Gene),
+            Seqid=pull(gff_base,Seqid),
+            Source=pull(gff_base,Source),
+            Type=type,
+            Start=Start,
+            End=End,
+            Score=NA,
+            Strand=Strand,
+            Phase=NA,
+            Attr=paste0( IDextl, pull(gff_base,Gene), IDextr)
+            )
+}
+
+union_gff_groups &lt;- function(gff_in,...,type=&quot;Union&quot;) {
+    gff_in %&gt;%
+        group_by(...) %&gt;% 
+        summarise(
+            Seqid=unique(Seqid),
+            Source=unique(Source),
+            Type=type,
+            Start=min(Start),
+            End=max(End),
+            Score=NA,
+            Strand=unique(Strand),
+            Phase=NA,
+            Attr=unique(Attr)
+        )
 }</code></pre>
 </div>
 <div id="load-data-from-gffs" class="section level1">
@@ -593,15 +642,7 @@ write_gff(gff_5pintrons,
 gff_verCDSunion &lt;- 
     gff_CDS %&gt;%
     filter( Seqid != &quot;chrmt&quot;, str_detect(Attr,&quot;Verified&quot;)) %&gt;%
-    group_by(Gene) %&gt;%
-    summarize(Seqid=Seqid[1],
-              Source=Source[1],
-              Type=&quot;primary_transcript_region&quot;,
-              Start=min(Start),End=max(End),
-              Score=Score[1],
-              Strand=Strand[1],
-              Phase=NA,
-              Attr=Attr[1])
+    union_gff_groups(Gene,type=&quot;primary_transcript_region&quot;)
 
 gff_join_vCDS_txs &lt;- 
     gff_verCDSunion %&gt;%
@@ -657,14 +698,69 @@ write_gff(x=gff_3UTRs,
 -b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff &gt; \
 ../out/longest_five_prime_UTRs_nointrons.gff</code></pre>
 </div>
-<div id="remove-introns-from-5utrs-with-a-homemade-tidyverse-function" class="section level2">
-<h2>Remove introns from 5’UTRs with a homemade tidyverse function</h2>
+</div>
+<div id="cdss-with-default-length-25nt-5utrs-and-125nt-3utrs" class="section level1">
+<h1>CDSs with default-length 25nt 5UTRs and 125nt 3’UTRs</h1>
+<pre class="r"><code>gff_verCDSext &lt;- 
+    gff_verCDSunion %&gt;%
+    group_by(Gene) %&gt;% 
+    do(extend_feature(.,ext5prime=25,ext3prime=125,
+                      IDextr=&quot;_tx0&quot;,type=&quot;primary_transcript&quot;)) %&gt;%
+    mutate(Source=&quot;yeastutrgff&quot;)
+
+outfile_CDSext &lt;- here::here(
+    &quot;out&quot;,
+    &quot;transcripts_fixedlength_25nt5p_125nt3p_UTRs.gff&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_CDSext)
+
+write_gff(x=gff_verCDSext,
+          path=outfile_CDSext,
+          append=TRUE)</code></pre>
+<div id="now-make-transcripts-which-are-longest-if-we-have-data-fixed-length-if-we-dont" class="section level2">
+<h2>Now make transcripts which are longest if we have data, fixed-length if we don’t</h2>
+<pre class="r"><code>genes_verified_no_longesttx &lt;- 
+    setdiff(gff_verCDSext$Gene,gff_txs$Gene)
+
+gff_longest_or_CDSext &lt;- 
+    bind_rows(gff_txs,
+              gff_verCDSext %&gt;% 
+                  filter(
+                     Gene %in% genes_verified_no_longesttx)
+              ) %&gt;% 
+    arrange(Gene)
+
+outfile_longest_or_CDSext &lt;- here::here(
+    &quot;out&quot;,
+    &quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff3&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_longest_or_CDSext)
+
+write_gff(x=gff_longest_or_CDSext,
+          path=outfile_longest_or_CDSext,
+          append=TRUE)</code></pre>
+</div>
+<div id="remove-introns-from-cds" class="section level2">
+<h2>Remove introns from CDS?</h2>
+<pre class="r"><code>gff_introns &lt;- 
+    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
+    read_gff() %&gt;% 
+    filter(Type==&quot;intron&quot;) %&gt;%
+    mutate(Gene = gene_from_attr(Attr,after=&quot;_intron&quot;)) </code></pre>
 </div>
 </div>
 <div id="to-do" class="section level1">
 <h1>To Do</h1>
 <ul>
-<li>Remove introns from 5’UTRs</li>
+<li>Make gff with CDS, introns, coding transcripts, UTRs, only</li>
 <li>Make approximate txs with introns removed?</li>
 <li>Update annotation for Ssd1 genome browser figures</li>
 <li>Count Ssd1 reads on different kinds of features</li>

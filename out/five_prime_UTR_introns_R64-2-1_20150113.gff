@@ -1,0 +1,27 @@
+##gff-version 3
+##source-version yeastutrgff
+##date 2020-03-25
+chrII	SGD	five_prime_UTR_intron	45645	45977	.	+	.	Parent=YBL092W_mRNA;Name=YBL092W_five_prime_UTR_intron;orf_classification=Verified
+chrII	SGD	five_prime_UTR_intron	89133	89440	.	-	.	Parent=YBL072C_mRNA;Name=YBL072C_five_prime_UTR_intron;orf_classification=Verified
+chrII	SGD	five_prime_UTR_intron	426517	426873	.	-	.	Parent=YBR089C-A_mRNA;Name=YBR089C-A_five_prime_UTR_intron;orf_classification=Verified
+chrIV	SGD	five_prime_UTR_intron	122078	122176	.	+	.	Parent=YDL189W_mRNA;Name=YDL189W_five_prime_UTR_intron;orf_classification=Verified
+chrIV	SGD	five_prime_UTR_intron	216158	216489	.	+	.	Parent=YDL137W_mRNA;Name=YDL137W_five_prime_UTR_intron;orf_classification=Verified
+chrIV	SGD	five_prime_UTR_intron	340811	341219	.	-	.	Parent=YDL061C_mRNA;Name=YDL061C_five_prime_UTR_intron;orf_classification=Verified
+chrIV	SGD	five_prime_UTR_intron	652781	653523	.	+	.	Parent=YDR099W_mRNA;Name=YDR099W_five_prime_UTR_intron;orf_classification=Verified
+chrV	SGD	five_prime_UTR_intron	362733	363092	.	+	.	Parent=YER102W_mRNA;Name=YER102W_five_prime_UTR_intron;orf_classification=Verified
+chrV	SGD	five_prime_UTR_intron	423591	423951	.	+	.	Parent=YER131W_mRNA;Name=YER131W_five_prime_UTR_intron;orf_classification=Verified
+chrVI	SGD	five_prime_UTR_intron	223441	223771	.	-	.	Parent=YFR032C-A_mRNA;Name=YFR032C-A_five_prime_UTR_intron;orf_classification=Verified
+chrVII	SGD	five_prime_UTR_intron	148599	148966	.	-	.	Parent=YGL189C_mRNA;Name=YGL189C_five_prime_UTR_intron;orf_classification=Verified
+chrVII	SGD	five_prime_UTR_intron	150184	150525	.	-	.	Parent=YGL187C_mRNA;Name=YGL187C_five_prime_UTR_intron;orf_classification=Verified
+chrVII	SGD	five_prime_UTR_intron	437942	438397	.	-	.	Parent=YGL031C_mRNA;Name=YGL031C_five_prime_UTR_intron;orf_classification=Verified
+chrVII	SGD	five_prime_UTR_intron	534474	534785	.	-	.	Parent=YGR027C_mRNA;Name=YGR027C_five_prime_UTR_intron;orf_classification=Verified
+chrVII	SGD	five_prime_UTR_intron	787787	788178	.	-	.	Parent=YGR148C_mRNA;Name=YGR148C_five_prime_UTR_intron;orf_classification=Verified
+chrIX	SGD	five_prime_UTR_intron	127662	128148	.	+	.	Parent=YIL123W_mRNA;Name=YIL123W_five_prime_UTR_intron;orf_classification=Verified
+chrX	SGD	five_prime_UTR_intron	172433	172752	.	-	.	Parent=YJL130C_mRNA;Name=YJL130C_five_prime_UTR_intron;orf_classification=Verified
+chrXI	SGD	five_prime_UTR_intron	93312	93465	.	-	.	Parent=YKL186C_mRNA;Name=YKL186C_five_prime_UTR_intron;orf_classification=Verified
+chrXI	SGD	five_prime_UTR_intron	166400	166487	.	+	.	Parent=YKL150W_mRNA;Name=YKL150W_five_prime_UTR_intron;orf_classification=Verified
+chrXII	SGD	five_prime_UTR_intron	795913	796335	.	-	.	Parent=YLR333C_mRNA;Name=YLR333C_five_prime_UTR_intron;orf_classification=Verified
+chrXII	SGD	five_prime_UTR_intron	855878	856434	.	+	.	Parent=YLR367W_mRNA;Name=YLR367W_five_prime_UTR_intron;orf_classification=Verified
+chrXII	SGD	five_prime_UTR_intron	898158	898645	.	+	.	Parent=YLR388W_mRNA;Name=YLR388W_five_prime_UTR_intron;orf_classification=Verified
+chrXIV	SGD	five_prime_UTR_intron	501157	501502	.	+	.	Parent=YNL066W_mRNA;Name=YNL066W_five_prime_UTR_intron;orf_classification=Verified
+chrXVI	SGD	five_prime_UTR_intron	115219	115293	.	+	.	Parent=YPL230W_mRNA;Name=YPL230W_five_prime_UTR_intron;orf_classification=Verified

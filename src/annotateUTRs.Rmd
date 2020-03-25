@@ -133,6 +133,52 @@ assign_3UTR <- function(gff_join_row,defaultlength=125) {
             Phase=NA,
             Attr=Attr.UTR)
 }
+
+extend_feature <- function(gff_base,IDextl="ID=",IDextr="_ext",
+                           ext5prime=25,ext3prime=125,extunstranded=0,
+                           type="extension") {
+    # extends a stranded feature in a gff_base by defined amounts
+    # assumes there is a "Gene" column for ID, not ideal. 
+    # This is very slow, maybe worth profiling?
+    Strand <- pull(gff_base,Strand)
+    if( Strand == "+" ) {
+        Start <- pull(gff_base,Start) - ext5prime
+        End   <- pull(gff_base,End)   + ext3prime
+    } else if( Strand == "-" ) {
+        Start <- pull(gff_base,Start) - ext3prime
+        End   <- pull(gff_base,End)   + ext5prime
+    } else {
+        Start <- pull(gff_base,Start) - extunstranded
+        End   <- pull(gff_base,End)   + extunstranded
+    }
+    tibble( Gene=pull(gff_base,Gene),
+            Seqid=pull(gff_base,Seqid),
+            Source=pull(gff_base,Source),
+            Type=type,
+            Start=Start,
+            End=End,
+            Score=NA,
+            Strand=Strand,
+            Phase=NA,
+            Attr=paste0( IDextl, pull(gff_base,Gene), IDextr)
+            )
+}
+
+union_gff_groups <- function(gff_in,...,type="Union") {
+    gff_in %>%
+        group_by(...) %>% 
+        summarise(
+            Seqid=unique(Seqid),
+            Source=unique(Source),
+            Type=type,
+            Start=min(Start),
+            End=max(End),
+            Score=NA,
+            Strand=unique(Strand),
+            Phase=NA,
+            Attr=unique(Attr)
+        )
+}
 ```
 
 # Load data from gffs
@@ -194,15 +240,7 @@ Only one gene, YJL130C/URA2, has an annotated 5'UTR intron while not being in th
 gff_verCDSunion <- 
     gff_CDS %>%
     filter( Seqid != "chrmt", str_detect(Attr,"Verified")) %>%
-    group_by(Gene) %>%
-    summarize(Seqid=Seqid[1],
-              Source=Source[1],
-              Type="primary_transcript_region",
-              Start=min(Start),End=max(End),
-              Score=Score[1],
-              Strand=Strand[1],
-              Phase=NA,
-              Attr=Attr[1])
+    union_gff_groups(Gene,type="primary_transcript_region")
 
 gff_join_vCDS_txs <- 
     gff_verCDSunion %>%
@@ -260,23 +298,81 @@ write_gff(x=gff_3UTRs,
 
 ## Remove introns from 5'UTRs using bedtools
 
-```{bash bedtools_subtract_5UTRintrons,eval = FALSE}
+```{bash bedtools_subtract_5UTRintrons}
 bedtools subtract -s \
 -a ../out/longest_five_prime_UTRs_keepintrons.gff \
 -b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff > \
 ../out/longest_five_prime_UTRs_nointrons.gff
 ```
 
-## Remove introns from 5'UTRs with a homemade tidyverse function
+# CDSs with default-length 25nt 5UTRs and 125nt 3'UTRs
 
-```{r subtract_5UTRintrons,eval = FALSE}
+```{r gff_CDS_extend,dependson="gff_join"}
+gff_verCDSext <- 
+    gff_verCDSunion %>%
+    group_by(Gene) %>% 
+    do(extend_feature(.,ext5prime=25,ext3prime=125,
+                      IDextr="_tx0",type="primary_transcript")) %>%
+    mutate(Source="yeastutrgff")
 
+outfile_CDSext <- here::here(
+    "out",
+    "transcripts_fixedlength_25nt5p_125nt3p_UTRs.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_CDSext)
+
+write_gff(x=gff_verCDSext,
+          path=outfile_CDSext,
+          append=TRUE)
+```
+
+## Now make transcripts which are longest if we have data, fixed-length if we don't
+
+```{r gff_longest_or_CDSext,dependson="gff_CDS_extend"}
+genes_verified_no_longesttx <- 
+    setdiff(gff_verCDSext$Gene,gff_txs$Gene)
+
+gff_longest_or_CDSext <- 
+    bind_rows(gff_txs,
+              gff_verCDSext %>% 
+                  filter(
+                     Gene %in% genes_verified_no_longesttx)
+              ) %>% 
+    arrange(Gene)
+
+outfile_longest_or_CDSext <- here::here(
+    "out",
+    "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff3")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_longest_or_CDSext)
+
+write_gff(x=gff_longest_or_CDSext,
+          path=outfile_longest_or_CDSext,
+          append=TRUE)
+```
+
+## Remove introns from CDS?
+
+```{r gff_introns,eval=FALSE}
+gff_introns <- 
+    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
+    read_gff() %>% 
+    filter(Type=="intron") %>%
+    mutate(Gene = gene_from_attr(Attr,after="_intron")) 
 ```
 
 
 # To Do
 
-* Remove introns from 5'UTRs
+* Make gff with CDS, introns, coding transcripts, UTRs, only
 * Make approximate txs with introns removed?
 * Update annotation for Ssd1 genome browser figures
 * Count Ssd1 reads on different kinds of features
