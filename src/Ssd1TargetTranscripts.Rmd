@@ -16,6 +16,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(Biostrings)
 library(here)
+library(VennDiagram)
+venn <- function(...) {
+    venn.diagram(x=list(...),filename=NULL,margin=0.1) %>% grid.draw
+}
 ```
 
 ```{r load_txs}
@@ -185,4 +189,14 @@ The following Ssd1 targets are not in the list of transcript sequences:
 
 ```{r dependson="Hose_seqs"}
 ssd1_targets_hose2020_woseqs
+```
+
+# Venn diagram of intersections
+
+Ugly yet effective.
+
+```{r venn_hogan_jansen_hose,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=4,fig.height=3.8}
+venn(Hogan=ssd1_targets_hogan2008,
+     Jansen=ssd1_targets_jansen2009,
+     Hose=ssd1_targets_hose2020)
 ```
