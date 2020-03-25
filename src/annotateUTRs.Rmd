@@ -42,9 +42,10 @@ read_gff <- function(file){
 
 write_gff <- function(x,path,...) {
     x %>%
-        ungroup %>%
-        select(Seqid,Source,Type,Start,End,Score,Strand,Phase,Attr) %>%
-        write_tsv(path=path,...)
+        dplyr::ungroup() %>%
+        dplyr::select(Seqid,Source,Type,Start,End,Score,Strand,Phase,Attr) %>%
+        tidyr::replace_na(list(Score=".",Strand=".",Phase=".")) %>%
+        readr::write_tsv(path=path,...)
 }
 
 gene_from_attr <- function(attr_string,
@@ -68,7 +69,7 @@ assign_5UTR <- function(gff_join_row,defaultlength=25) {
             paste0("ID=",.,"_5UTR;Parent=",.) 
     } else {
         Attr.UTR <- pull(gff_join_row,Gene) %>%
-            paste0("ID=",.,"_",defaultlength,"nt_5UTR") 
+            paste0("ID=",.,"_",defaultlength,"nt_5UTR;Parent=",.,"_tx0") 
     }
     Strand <- pull(gff_join_row,Strand)
     if( Strand == "+" ) {
@@ -86,7 +87,7 @@ assign_5UTR <- function(gff_join_row,defaultlength=25) {
     }
     tibble( Gene=pull(gff_join_row,Gene),
             Seqid=pull(gff_join_row,Seqid),
-            Source=pull(gff_join_row,Seqid),
+            Source=pull(gff_join_row,Source),
             Type="five_prime_UTR",
             Start=Start.UTR,
             End=End.UTR,
@@ -105,7 +106,7 @@ assign_3UTR <- function(gff_join_row,defaultlength=125) {
             paste0("ID=",.,"_3UTR;Parent=",.) 
     } else {
         Attr.UTR <- pull(gff_join_row,Gene) %>%
-            paste0("ID=",.,"_",defaultlength,"nt_3UTR") 
+            paste0("ID=",.,"_",defaultlength,"nt_3UTR;Parent=",.,"_tx0")
     }
     Strand <- pull(gff_join_row,Strand)
     if( Strand == "-" ) {
@@ -123,7 +124,7 @@ assign_3UTR <- function(gff_join_row,defaultlength=125) {
     }
     tibble( Gene=pull(gff_join_row,Gene),
             Seqid=pull(gff_join_row,Seqid),
-            Source=pull(gff_join_row,Seqid),
+            Source=pull(gff_join_row,Source),
             Type="three_prime_UTR",
             Start=Start.UTR,
             End=End.UTR,
@@ -159,12 +160,26 @@ gff_txs <-
 
 We need to address 5'UTR introns in particular becase several genes of interest (ribosomal proteins and Ssd1 targets) have 5'UTR introns, and we want to get their sequences right.
 
-```{r check_5pintrons}
+```{r check_5pintrons,dependson="load_gffs"}
 gff_5pintrons %>%
     dplyr::mutate( longest_tx_annot = ( Gene %in% gff_txs$Gene) ) %>%
     dplyr::select(Gene,longest_tx_annot,Attr) %>%
     print(n=30)
 ```
+
+```{r write_5pintrons,dependson="load_gffs"}
+outfile_5UTR_introns <-
+    here::here("out","five_prime_UTR_introns_R64-2-1_20150113.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_5UTR_introns)
+write_gff(gff_5pintrons,
+          path=outfile_5UTR_introns,
+          append=TRUE)
+```
+
 
 Only one gene, YJL130C/URA2, has an annotated 5'UTR intron while not being in the longest_tx list. We can safely get the annotation wrong for this one gene.
 
@@ -242,6 +257,22 @@ write_gff(x=gff_3UTRs,
           path=outfile_3UTRs,
           append=TRUE)
 ```
+
+## Remove introns from 5'UTRs using bedtools
+
+```{bash bedtools_subtract_5UTRintrons,eval = FALSE}
+bedtools subtract -s \
+-a ../out/longest_five_prime_UTRs_keepintrons.gff \
+-b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff > \
+../out/longest_five_prime_UTRs_nointrons.gff
+```
+
+## Remove introns from 5'UTRs with a homemade tidyverse function
+
+```{r subtract_5UTRintrons,eval = FALSE}
+
+```
+
 
 # To Do
 
