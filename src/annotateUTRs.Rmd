@@ -147,13 +147,26 @@ gff_5pintrons <-
     here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
     read_gff() %>% 
     filter(Type=="five_prime_UTR_intron") %>%
-    mutate(Gene = gene_from_attr(Attr)) 
+    mutate(Gene = gene_from_attr(Attr,after="_five_prime_UTR_intron")) 
 
 gff_txs <- 
     here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
     read_gff() %>%
     mutate(Gene = gene_from_attr(Attr,before="ID=")) 
 ```
+
+## Which genes have 5'UTR introns? Which have longest annotations?
+
+We need to address 5'UTR introns in particular becase several genes of interest (ribosomal proteins and Ssd1 targets) have 5'UTR introns, and we want to get their sequences right.
+
+```{r check_5pintrons}
+gff_5pintrons %>%
+    dplyr::mutate( longest_tx_annot = ( Gene %in% gff_txs$Gene) ) %>%
+    dplyr::select(Gene,longest_tx_annot,Attr) %>%
+    print(n=30)
+```
+
+Only one gene, YJL130C/URA2, has an annotated 5'UTR intron while not being in the longest_tx list. We can safely get the annotation wrong for this one gene.
 
 
 # Join CDS annotation
