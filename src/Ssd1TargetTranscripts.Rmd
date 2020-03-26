@@ -9,6 +9,7 @@ output:
 
 A script to get transcripts targeted by Ssd1 from published data, then separate their transcript targets and do motif analysis on them.
 
+Now updated to reflect verified ORFs only, longest transcripts when taken from Pelechano 2013, imputed fixed-length UTRs otherwise, and spliced for mature transcripts only.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -26,7 +27,7 @@ venn <- function(...) {
 txs_fasta <- 
     Biostrings::readDNAStringSet(
         here::here("out",
-                   "longest_full-ORF_transcripts_keepintrons_ypd.fasta")
+                   "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
     )
 names(txs_fasta) <- 
     names(txs_fasta) %>% 
@@ -81,7 +82,7 @@ ssd1_targets_hogan2008_seqs <-
 writeXStringSet(ssd1_targets_hogan2008_seqs,
                 here::here(
                     "out","Ssd1_targets",
-                    "ssd1_targets_hogan2008_localfdr5_longesttxseqs.fasta"))
+                    "ssd1_targets_hogan2008_localfdr5_longestetcspliced_txseqs.fasta"))
 ```
 
 The following Ssd1 targets are not in the list of transcript sequences:
@@ -138,7 +139,7 @@ ssd1_targets_jansen2009_seqs <-
 writeXStringSet(ssd1_targets_jansen2009_seqs,
                 here::here(
                     "out","Ssd1_targets",
-                    "ssd1_targets_jansen2009_localfdr5_longesttxseqs.fasta"))
+                    "ssd1_targets_jansen2009_localfdr5_longestetcspliced_txseqs.fasta"))
 ```
 
 The following Ssd1 targets are not in the list of transcript sequences:
@@ -147,7 +148,7 @@ The following Ssd1 targets are not in the list of transcript sequences:
 ssd1_targets_jansen2009_woseqs
 ```
 
-That suggests that we should make educated guesses for those UTRs.
+These are dubious or otherwise non-verified ORFs.
 
 ## Hose 2020
 
@@ -182,7 +183,7 @@ ssd1_targets_hose2020_seqs <-
 writeXStringSet(ssd1_targets_hose2020_seqs,
                 here::here(
                     "out","Ssd1_targets",
-                    "ssd1_targets_hose2020_fdr5_longesttxseqs.fasta"))
+                    "ssd1_targets_hose2020_fdr5_longestetcspliced_txseqs.fasta"))
 ```
 
 The following Ssd1 targets are not in the list of transcript sequences:
