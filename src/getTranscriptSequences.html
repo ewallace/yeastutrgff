@@ -413,11 +413,24 @@ Biostrings::writeXStringSet(
     here::here(&quot;out&quot;,
                &quot;longest_full-ORF_transcripts_keepintrons_ypd.fasta&quot;)
 )</code></pre>
+<pre class="r"><code>granges_txs &lt;- 
+    here::here(&quot;out&quot;,&quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff&quot;) %&gt;%
+    rtracklayer::readGFFAsGRanges() 
+
+seqs_txs &lt;- Biostrings::getSeq(Scer_FaFile,granges_txs) %&gt;%
+    set_names(granges_txs$ID)
+
+Biostrings::writeXStringSet(
+    seqs_txs, 
+    here::here(&quot;out&quot;,
+               &quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta&quot;)
+)</code></pre>
 </div>
 </div>
 <div id="to-do" class="section level1">
 <h1>To do:</h1>
 <ul>
+<li>Make longest or alternately fixed-length-UTR transcript seqs.</li>
 <li>Make transcripts with introns removed?</li>
 <li>Make a version with just spliced 5’UTRs?</li>
 </ul>

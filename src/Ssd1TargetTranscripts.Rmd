@@ -200,3 +200,7 @@ venn(Hogan=ssd1_targets_hogan2008,
      Jansen=ssd1_targets_jansen2009,
      Hose=ssd1_targets_hose2020)
 ```
+
+# To do:
+
+* MEME analysis in Differential Enrichment mode, Ssd1 targets vs other

@@ -346,7 +346,7 @@ gff_longest_or_CDSext <-
 
 outfile_longest_or_CDSext <- here::here(
     "out",
-    "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff3")
+    "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
 
 write_lines(
     x=c("##gff-version 3", 
@@ -362,11 +362,32 @@ write_gff(x=gff_longest_or_CDSext,
 ## Remove introns from CDS?
 
 ```{r gff_introns,eval=FALSE}
-gff_introns <- 
+gff_allnucmRNAintrons <- 
     here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
     read_gff() %>% 
-    filter(Type=="intron") %>%
+    filter(str_detect(Type,"intron"),str_detect(Attr,"Parent=Y")) %>%
     mutate(Gene = gene_from_attr(Attr,after="_intron")) 
+
+outfile_nucmRNA_introns <-
+    here::here("out","nuclear_mRNA_introns_R64-2-1_20150113.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##all introns from nuclear chromosome mRNAs, including 5'UTR introns"),
+    path=outfile_nucmRNA_introns)
+write_gff(gff_allnucmRNAintrons,
+          path=outfile_nucmRNA_introns,
+          append=TRUE)
+```
+
+## Remove introns from longest transcripts using bedtools
+
+```{bash bedtools_subtract_allintrons}
+bedtools subtract -s \
+-a ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
+-b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff > \
+../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff
 ```
 
 

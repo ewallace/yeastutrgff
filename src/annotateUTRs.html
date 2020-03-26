@@ -383,6 +383,7 @@ summary {
 <li><a href="#cdss-with-default-length-25nt-5utrs-and-125nt-3utrs">CDSs with default-length 25nt 5UTRs and 125nt 3’UTRs</a><ul>
 <li><a href="#now-make-transcripts-which-are-longest-if-we-have-data-fixed-length-if-we-dont">Now make transcripts which are longest if we have data, fixed-length if we don’t</a></li>
 <li><a href="#remove-introns-from-cds">Remove introns from CDS?</a></li>
+<li><a href="#remove-introns-from-longest-transcripts-using-bedtools">Remove introns from longest transcripts using bedtools</a></li>
 </ul></li>
 <li><a href="#to-do">To Do</a></li>
 </ul>
@@ -736,7 +737,7 @@ gff_longest_or_CDSext &lt;-
 
 outfile_longest_or_CDSext &lt;- here::here(
     &quot;out&quot;,
-    &quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff3&quot;)
+    &quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff&quot;)
 
 write_lines(
     x=c(&quot;##gff-version 3&quot;, 
@@ -750,11 +751,30 @@ write_gff(x=gff_longest_or_CDSext,
 </div>
 <div id="remove-introns-from-cds" class="section level2">
 <h2>Remove introns from CDS?</h2>
-<pre class="r"><code>gff_introns &lt;- 
+<pre class="r"><code>gff_allnucmRNAintrons &lt;- 
     here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
     read_gff() %&gt;% 
-    filter(Type==&quot;intron&quot;) %&gt;%
-    mutate(Gene = gene_from_attr(Attr,after=&quot;_intron&quot;)) </code></pre>
+    filter(str_detect(Type,&quot;intron&quot;),str_detect(Attr,&quot;Parent=Y&quot;)) %&gt;%
+    mutate(Gene = gene_from_attr(Attr,after=&quot;_intron&quot;)) 
+
+outfile_nucmRNA_introns &lt;-
+    here::here(&quot;out&quot;,&quot;nuclear_mRNA_introns_R64-2-1_20150113.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today()),
+        &quot;##all introns from nuclear chromosome mRNAs, including 5'UTR introns&quot;),
+    path=outfile_nucmRNA_introns)
+write_gff(gff_allnucmRNAintrons,
+          path=outfile_nucmRNA_introns,
+          append=TRUE)</code></pre>
+</div>
+<div id="remove-introns-from-longest-transcripts-using-bedtools" class="section level2">
+<h2>Remove introns from longest transcripts using bedtools</h2>
+<pre class="bash"><code>bedtools subtract -s \
+-a ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
+-b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff &gt; \
+../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff</code></pre>
 </div>
 </div>
 <div id="to-do" class="section level1">

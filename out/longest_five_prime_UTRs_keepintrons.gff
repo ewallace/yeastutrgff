@@ -1,6 +1,6 @@
 ##gff-version 3
 ##source-version yeastutrgff
-##date 2020-03-25
+##date 2020-03-26
 chrI	yeastutrgff	five_prime_UTR	151167	151191	.	-	.	ID=YAL001C_25nt_5UTR;Parent=YAL001C_tx0
 chrI	yeastutrgff	five_prime_UTR	143682	143706	.	+	.	ID=YAL002W_25nt_5UTR;Parent=YAL002W_tx0
 chrI	yeastutrgff	five_prime_UTR	142141	142173	.	+	.	ID=YAL003W_id003_5UTR;Parent=YAL003W_id003

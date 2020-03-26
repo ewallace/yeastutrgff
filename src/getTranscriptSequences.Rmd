@@ -59,9 +59,25 @@ Biostrings::writeXStringSet(
 )
 ```
 
+```{r longest_etc_tx_seqs,dependson="load_genome"}
+granges_txs <- 
+    here::here("out","longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff") %>%
+    rtracklayer::readGFFAsGRanges() 
+
+seqs_txs <- Biostrings::getSeq(Scer_FaFile,granges_txs) %>%
+    set_names(granges_txs$ID)
+
+Biostrings::writeXStringSet(
+    seqs_txs, 
+    here::here("out",
+               "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
+)
+```
+
 
 # To do:
 
+* Make longest or alternately fixed-length-UTR transcript seqs.
 * Make transcripts with introns removed?
 * Make a version with just spliced 5'UTRs?
 
