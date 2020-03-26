@@ -111,6 +111,22 @@ Biostrings::writeXStringSet(
 )
 ```
 
+## Get 5'UTR sequences
+
+```{r longest_5UTRs_keepintrons,dependson="load_genome"}
+granges_5UTRs_keep <- 
+    here::here("out","longest_five_prime_UTRs_keepintrons.gff") %>%
+    rtracklayer::readGFFAsGRanges() 
+
+seqs_5UTRs_keep <- Biostrings::getSeq(Scer_FaFile,granges_5UTRs_keep) %>%
+    magrittr::set_names(granges_5UTRs_keep$ID)
+
+Biostrings::writeXStringSet(
+    seqs_5UTRs_keep, 
+    here::here("out",
+               "longest_five_prime_UTRs_keepintrons.fasta")
+)
+```
 
 # To do:
 

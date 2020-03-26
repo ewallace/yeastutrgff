@@ -393,6 +393,15 @@ summary {
     )
 names(txs_fasta) &lt;- 
     names(txs_fasta) %&gt;% 
+    str_remove(&quot;_.*&quot;)
+
+five_UTRs_fasta &lt;- 
+    Biostrings::readDNAStringSet(
+        here::here(&quot;out&quot;,
+                   &quot;longest_five_prime_UTRs_keepintrons.fasta&quot;)
+    )
+names(five_UTRs_fasta) &lt;- 
+    names(five_UTRs_fasta) %&gt;% 
     str_remove(&quot;_.*&quot;) </code></pre>
 <div id="lists-of-mrnas-enriched-in-ssd1-binding" class="section level1">
 <h1>Lists of mRNAs enriched in Ssd1 binding</h1>
@@ -455,6 +464,19 @@ writeXStringSet(ssd1_targets_hogan2008_seqs,
 <pre class="r"><code>ssd1_targets_hogan2008_woseqs</code></pre>
 <pre><code>## [1] &quot;YER138W-A&quot;</code></pre>
 <p>That suggests that we should make educated guesses for those UTRs.</p>
+<pre class="r"><code>ssd1_targets_hogan2008_5UTR_seqs &lt;-
+    five_UTRs_fasta[intersect(ssd1_targets_hogan2008,names(five_UTRs_fasta))]
+
+writeXStringSet(ssd1_targets_hogan2008_5UTR_seqs,
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_hogan2008_localfdr5_5UTRs_keepintrons.fasta&quot;))
+
+writeXStringSet(ssd1_targets_hogan2008_5UTR_seqs[
+  width(ssd1_targets_hogan2008_5UTR_seqs) &gt; 15 ],
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_hogan2008_localfdr5_5UTRs_keepintrons_minwidth15.fasta&quot;))</code></pre>
 </div>
 <div id="jansen-2009" class="section level2">
 <h2>Jansen 2009</h2>
@@ -567,6 +589,19 @@ writeXStringSet(ssd1_targets_hose2020_seqs,
 <p>The following Ssd1 targets are not in the list of transcript sequences:</p>
 <pre class="r"><code>ssd1_targets_hose2020_woseqs</code></pre>
 <pre><code>## [1] &quot;YGR079W&quot;   &quot;YLR177W&quot;   &quot;YMR304C-A&quot; &quot;YDR134C&quot;   &quot;YPR087W&quot;   &quot;YMR316C-A&quot;</code></pre>
+<pre class="r"><code>ssd1_targets_hose2020_5UTR_seqs &lt;-
+    five_UTRs_fasta[intersect(ssd1_targets_hose2020,names(five_UTRs_fasta))]
+
+writeXStringSet(ssd1_targets_hose2020_5UTR_seqs,
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_hose2020_fdr5_5UTRs_keepintrons.fasta&quot;))
+
+writeXStringSet(ssd1_targets_hose2020_5UTR_seqs[
+  width(ssd1_targets_hose2020_5UTR_seqs) &gt; 15 ],
+                here::here(
+                    &quot;out&quot;,&quot;Ssd1_targets&quot;,
+                    &quot;ssd1_targets_hose2020_fdr5_5UTRs_keepintrons_minwidth15.fasta&quot;))</code></pre>
 </div>
 </div>
 <div id="venn-diagram-of-intersections" class="section level1">

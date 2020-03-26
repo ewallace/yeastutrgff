@@ -375,6 +375,7 @@ summary {
 <li><a href="#try-with-bioconductor">Try with bioconductor</a><ul>
 <li><a href="#load-genome-fasta">Load genome fasta</a></li>
 <li><a href="#get-transcript-sequences">Get transcript sequences</a></li>
+<li><a href="#get-5utr-sequences">Get 5’UTR sequences</a></li>
 </ul></li>
 <li><a href="#to-do">To do:</a></li>
 </ul>
@@ -461,6 +462,21 @@ Biostrings::writeXStringSet(
     seqs_splicedtxs, 
     here::here(&quot;out&quot;,
                &quot;longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta&quot;)
+)</code></pre>
+</div>
+<div id="get-5utr-sequences" class="section level2">
+<h2>Get 5’UTR sequences</h2>
+<pre class="r"><code>granges_5UTRs_keep &lt;- 
+    here::here(&quot;out&quot;,&quot;longest_five_prime_UTRs_keepintrons.gff&quot;) %&gt;%
+    rtracklayer::readGFFAsGRanges() 
+
+seqs_5UTRs_keep &lt;- Biostrings::getSeq(Scer_FaFile,granges_5UTRs_keep) %&gt;%
+    magrittr::set_names(granges_5UTRs_keep$ID)
+
+Biostrings::writeXStringSet(
+    seqs_5UTRs_keep, 
+    here::here(&quot;out&quot;,
+               &quot;longest_five_prime_UTRs_keepintrons.fasta&quot;)
 )</code></pre>
 </div>
 </div>
