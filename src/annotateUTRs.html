@@ -385,6 +385,7 @@ summary {
 <li><a href="#remove-introns-from-cds">Remove introns from CDS?</a></li>
 <li><a href="#remove-introns-from-longest-transcripts-using-bedtools">Remove introns from longest transcripts using bedtools</a></li>
 </ul></li>
+<li><a href="#collected-gff-with-cds-introns-coding-transcripts-utrs-only">Collected gff with CDS, introns, coding transcripts, UTRs, only</a></li>
 <li><a href="#to-do">To Do</a></li>
 </ul>
 </div>
@@ -556,35 +557,29 @@ union_gff_groups &lt;- function(gff_in,...,type=&quot;Union&quot;) {
 </div>
 <div id="load-data-from-gffs" class="section level1">
 <h1>Load data from gffs</h1>
+<pre class="r"><code>gff_SGDall &lt;- 
+    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
+    read_gff()</code></pre>
+<pre><code>## Warning: 151990 parsing failures.
+##   row col  expected    actual                                                                                        file
+## 23059  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23060  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23061  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23062  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23063  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## ..... ... ......... ......... ...........................................................................................
+## See problems(...) for more details.</code></pre>
 <pre class="r"><code>gff_CDS &lt;- 
-    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
-    read_gff() %&gt;% 
+    gff_SGDall %&gt;% 
     filter(Type==&quot;CDS&quot;) %&gt;%
-    mutate(Gene = gene_from_attr(Attr)) </code></pre>
-<pre><code>## Warning: 151990 parsing failures.
-##   row col  expected    actual                                                                                        file
-## 23059  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23060  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23061  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23062  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23063  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## ..... ... ......... ......... ...........................................................................................
-## See problems(...) for more details.</code></pre>
-<pre class="r"><code>gff_5pintrons &lt;- 
-    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
-    read_gff() %&gt;% 
+    mutate(Gene = gene_from_attr(Attr)) 
+
+gff_5pintrons &lt;- 
+    gff_SGDall %&gt;% 
     filter(Type==&quot;five_prime_UTR_intron&quot;) %&gt;%
-    mutate(Gene = gene_from_attr(Attr,after=&quot;_five_prime_UTR_intron&quot;)) </code></pre>
-<pre><code>## Warning: 151990 parsing failures.
-##   row col  expected    actual                                                                                        file
-## 23059  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23060  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23061  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23062  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23063  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## ..... ... ......... ......... ...........................................................................................
-## See problems(...) for more details.</code></pre>
-<pre class="r"><code>gff_txs &lt;- 
+    mutate(Gene = gene_from_attr(Attr,after=&quot;_five_prime_UTR_intron&quot;)) 
+
+gff_txs &lt;- 
     here::here(&quot;data&quot;,&quot;longest_full-ORF_transcripts_ypd.gff3&quot;) %&gt;%
     read_gff() %&gt;%
     mutate(Gene = gene_from_attr(Attr,before=&quot;ID=&quot;)) </code></pre>
@@ -698,6 +693,9 @@ write_gff(x=gff_3UTRs,
 -a ../out/longest_five_prime_UTRs_keepintrons.gff \
 -b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff &gt; \
 ../out/longest_five_prime_UTRs_nointrons.gff</code></pre>
+<pre class="r"><code>gff_5UTRs_nointrons &lt;- 
+    here::here(&quot;out&quot;,&quot;longest_five_prime_UTRs_nointrons.gff&quot;) %&gt;%
+    read_gff()</code></pre>
 </div>
 </div>
 <div id="cdss-with-default-length-25nt-5utrs-and-125nt-3utrs" class="section level1">
@@ -752,8 +750,7 @@ write_gff(x=gff_longest_or_CDSext,
 <div id="remove-introns-from-cds" class="section level2">
 <h2>Remove introns from CDS?</h2>
 <pre class="r"><code>gff_allnucmRNAintrons &lt;- 
-    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
-    read_gff() %&gt;% 
+    gff_SGDall %&gt;% 
     filter(str_detect(Type,&quot;intron&quot;),str_detect(Attr,&quot;Parent=Y&quot;)) %&gt;%
     mutate(Gene = gene_from_attr(Attr,after=&quot;_intron&quot;)) 
 
@@ -777,12 +774,38 @@ write_gff(gff_allnucmRNAintrons,
 ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff</code></pre>
 </div>
 </div>
+<div id="collected-gff-with-cds-introns-coding-transcripts-utrs-only" class="section level1">
+<h1>Collected gff with CDS, introns, coding transcripts, UTRs, only</h1>
+<pre class="r"><code>gff_collected &lt;- 
+    bind_rows( 
+        gff_SGDall %&gt;%
+            filter( Type %in% 
+                        c(&quot;chromosome&quot;,
+                          &quot;rRNA_gene&quot;,&quot;ncRNA_gene&quot;,&quot;telomerase_RNA_gene&quot;,
+                          &quot;snoRNA_gene&quot;,&quot;snRNA_gene&quot;,&quot;tRNA_gene&quot;)
+            ),
+        gff_allnucmRNAintrons,
+        gff_5UTRs_nointrons,
+        gff_3UTRs,
+        gff_CDS
+    ) %&gt;%
+    dplyr::arrange(Seqid,Start,desc(End))
+
+outfile_gff_collected &lt;-
+    here::here(&quot;out&quot;,&quot;gff_Chromosomes_ncRNAs_mRNAparts.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today()),
+        &quot;##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+    path=outfile_gff_collected)
+write_gff(gff_collected,
+          path=outfile_gff_collected,
+          append=TRUE)</code></pre>
+</div>
 <div id="to-do" class="section level1">
 <h1>To Do</h1>
 <ul>
-<li>Make gff with CDS, introns, coding transcripts, UTRs, only</li>
-<li>Make approximate txs with introns removed?</li>
-<li>Update annotation for Ssd1 genome browser figures</li>
 <li>Count Ssd1 reads on different kinds of features</li>
 </ul>
 </div>

@@ -184,15 +184,17 @@ union_gff_groups <- function(gff_in,...,type="Union") {
 # Load data from gffs
 
 ```{r load_gffs}
-gff_CDS <- 
+gff_SGDall <- 
     here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
-    read_gff() %>% 
+    read_gff()
+
+gff_CDS <- 
+    gff_SGDall %>% 
     filter(Type=="CDS") %>%
     mutate(Gene = gene_from_attr(Attr)) 
 
 gff_5pintrons <- 
-    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
-    read_gff() %>% 
+    gff_SGDall %>% 
     filter(Type=="five_prime_UTR_intron") %>%
     mutate(Gene = gene_from_attr(Attr,after="_five_prime_UTR_intron")) 
 
@@ -305,6 +307,12 @@ bedtools subtract -s \
 ../out/longest_five_prime_UTRs_nointrons.gff
 ```
 
+```{r load_gff_5UTRs_nointrons,dependson=c("gff_5UTRs_keepintrons","bedtools_subtract_5UTRintrons")}
+gff_5UTRs_nointrons <- 
+    here::here("out","longest_five_prime_UTRs_nointrons.gff") %>%
+    read_gff()
+```
+
 # CDSs with default-length 25nt 5UTRs and 125nt 3'UTRs
 
 ```{r gff_CDS_extend,dependson="gff_join"}
@@ -361,10 +369,9 @@ write_gff(x=gff_longest_or_CDSext,
 
 ## Remove introns from CDS?
 
-```{r gff_introns,eval=FALSE}
+```{r gff_introns}
 gff_allnucmRNAintrons <- 
-    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
-    read_gff() %>% 
+    gff_SGDall %>% 
     filter(str_detect(Type,"intron"),str_detect(Attr,"Parent=Y")) %>%
     mutate(Gene = gene_from_attr(Attr,after="_intron")) 
 
@@ -390,12 +397,41 @@ bedtools subtract -s \
 ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff
 ```
 
+# Collected gff with CDS, introns, coding transcripts, UTRs, only
+
+```{r gff_collected}
+gff_collected <- 
+    bind_rows( 
+        gff_SGDall %>%
+            filter( Type %in% 
+                        c("chromosome",
+                          "rRNA_gene","ncRNA_gene","telomerase_RNA_gene",
+                          "snoRNA_gene","snRNA_gene","tRNA_gene")
+            ),
+        gff_allnucmRNAintrons,
+        gff_5UTRs_nointrons,
+        gff_3UTRs,
+        gff_CDS
+    ) %>%
+    dplyr::arrange(Seqid,Start,desc(End))
+
+outfile_gff_collected <-
+    here::here("out","gff_Chromosomes_ncRNAs_mRNAparts.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
+    path=outfile_gff_collected)
+write_gff(gff_collected,
+          path=outfile_gff_collected,
+          append=TRUE)
+
+```
+
 
 # To Do
 
-* Make gff with CDS, introns, coding transcripts, UTRs, only
-* Make approximate txs with introns removed?
-* Update annotation for Ssd1 genome browser figures
 * Count Ssd1 reads on different kinds of features
 
 
