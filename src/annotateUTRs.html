@@ -385,7 +385,9 @@ summary {
 <li><a href="#remove-introns-from-cds">Remove introns from CDS?</a></li>
 <li><a href="#remove-introns-from-longest-transcripts-using-bedtools">Remove introns from longest transcripts using bedtools</a></li>
 </ul></li>
-<li><a href="#collected-gff-with-cds-introns-coding-transcripts-utrs-only">Collected gff with CDS, introns, coding transcripts, UTRs, only</a></li>
+<li><a href="#collected-gff-with-cds-introns-coding-transcripts-utrs-only">Collected gff with CDS, introns, coding transcripts, UTRs, only</a><ul>
+<li><a href="#gff-with-chromosomes-only">gff with chromosomes only</a></li>
+</ul></li>
 <li><a href="#to-do">To Do</a></li>
 </ul>
 </div>
@@ -802,6 +804,27 @@ write_lines(
 write_gff(gff_collected,
           path=outfile_gff_collected,
           append=TRUE)</code></pre>
+<div id="gff-with-chromosomes-only" class="section level2">
+<h2>gff with chromosomes only</h2>
+<pre class="r"><code>gff_chromosomesMito &lt;- 
+        gff_SGDall %&gt;%
+            filter( Type == &quot;chromosome&quot;) %&gt;%
+    mutate(Seqid = str_replace(Seqid,&quot;chrmt&quot;,&quot;chrMito&quot;),
+           Attr = str_replace_all(Attr,&quot;chrmt&quot;,&quot;chrMito&quot;))
+    
+
+outfile_gff_chromosomesMito &lt;-
+    here::here(&quot;out&quot;,&quot;gff_ChromosomesMito.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version SGD&quot;,
+        paste(&quot;##date&quot;,lubridate::today()),
+        &quot;##chromosomes only with chrmt replaced by chrMito&quot;),
+    path=outfile_gff_chromosomesMito)
+write_gff(gff_chromosomesMito,
+          path=outfile_gff_chromosomesMito,
+          append=TRUE)</code></pre>
+</div>
 </div>
 <div id="to-do" class="section level1">
 <h1>To Do</h1>

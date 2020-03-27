@@ -429,6 +429,29 @@ write_gff(gff_collected,
 
 ```
 
+## gff with chromosomes only
+
+```{r gff_chromosomesMito}
+gff_chromosomesMito <- 
+        gff_SGDall %>%
+            filter( Type == "chromosome") %>%
+    mutate(Seqid = str_replace(Seqid,"chrmt","chrMito"),
+           Attr = str_replace_all(Attr,"chrmt","chrMito"))
+    
+
+outfile_gff_chromosomesMito <-
+    here::here("out","gff_ChromosomesMito.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version SGD",
+        paste("##date",lubridate::today()),
+        "##chromosomes only with chrmt replaced by chrMito"),
+    path=outfile_gff_chromosomesMito)
+write_gff(gff_chromosomesMito,
+          path=outfile_gff_chromosomesMito,
+          append=TRUE)
+
+```
 
 # To Do
 

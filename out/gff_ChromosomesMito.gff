@@ -1,0 +1,21 @@
+##gff-version 3
+##source-version SGD
+##date 2020-03-27
+##chromosomes only with chrmt replaced by chrMito
+chrI	SGD	chromosome	1	230218	.	.	.	ID=chrI;dbxref=NCBI:NC_001133;Name=chrI
+chrII	SGD	chromosome	1	813184	.	.	.	ID=chrII;dbxref=NCBI:NC_001134;Name=chrII
+chrIII	SGD	chromosome	1	316620	.	.	.	ID=chrIII;dbxref=NCBI:NC_001135;Name=chrIII
+chrIV	SGD	chromosome	1	1531933	.	.	.	ID=chrIV;dbxref=NCBI:NC_001136;Name=chrIV
+chrV	SGD	chromosome	1	576874	.	.	.	ID=chrV;dbxref=NCBI:NC_001137;Name=chrV
+chrVI	SGD	chromosome	1	270161	.	.	.	ID=chrVI;dbxref=NCBI:NC_001138;Name=chrVI
+chrVII	SGD	chromosome	1	1090940	.	.	.	ID=chrVII;dbxref=NCBI:NC_001139;Name=chrVII
+chrVIII	SGD	chromosome	1	562643	.	.	.	ID=chrVIII;dbxref=NCBI:NC_001140;Name=chrVIII
+chrIX	SGD	chromosome	1	439888	.	.	.	ID=chrIX;dbxref=NCBI:NC_001141;Name=chrIX
+chrX	SGD	chromosome	1	745751	.	.	.	ID=chrX;dbxref=NCBI:NC_001142;Name=chrX
+chrXI	SGD	chromosome	1	666816	.	.	.	ID=chrXI;dbxref=NCBI:NC_001143;Name=chrXI
+chrXII	SGD	chromosome	1	1078177	.	.	.	ID=chrXII;dbxref=NCBI:NC_001144;Name=chrXII
+chrXIII	SGD	chromosome	1	924431	.	.	.	ID=chrXIII;dbxref=NCBI:NC_001145;Name=chrXIII
+chrXIV	SGD	chromosome	1	784333	.	.	.	ID=chrXIV;dbxref=NCBI:NC_001146;Name=chrXIV
+chrXV	SGD	chromosome	1	1091291	.	.	.	ID=chrXV;dbxref=NCBI:NC_001147;Name=chrXV
+chrXVI	SGD	chromosome	1	948066	.	.	.	ID=chrXVI;dbxref=NCBI:NC_001148;Name=chrXVI
+chrMito	SGD	chromosome	1	85779	.	.	.	ID=chrMito;dbxref=NCBI:NC_001224;Name=chrMito
