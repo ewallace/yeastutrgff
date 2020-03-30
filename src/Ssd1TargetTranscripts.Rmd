@@ -242,6 +242,37 @@ venn(Hogan=ssd1_targets_hogan2008,
      Hose=ssd1_targets_hose2020)
 ```
 
+
+## Bayne targets
+
+Removing dubious ORFs ets that don't have assigned gene names.
+
+```{r bayne_targets}
+ssd1_data_bayne2020 <-
+    here::here("data","Ssd1_targets",
+               "Ssd1_targets_TPMratio5x_30C_EW30Mar2020.txt") %>%
+    readr::read_tsv()
+
+
+ssd1_targets_bayne2020 <- 
+    ssd1_data_bayne2020 %>%
+    filter(!is.na(Name)) %>%
+    pull(Gene)
+```
+
+
+# Venn diagram of intersections with our data
+
+Ugly yet effective.
+
+```{r venn_hogan_jansen_hose_bayne,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=4,fig.height=3.8}
+venn(Hogan2008=ssd1_targets_hogan2008,
+     Jansen2009=ssd1_targets_jansen2009,
+     Hose2020=ssd1_targets_hose2020,
+     Bayne5x30C=ssd1_targets_bayne2020)
+```
+
+
 # To do:
 
 * MEME analysis in Differential Enrichment mode, Ssd1 targets vs other
