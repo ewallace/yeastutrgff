@@ -892,6 +892,19 @@ write_lines(
     path=outfile_gff_collected)
 write_gff(gff_collected,
           path=outfile_gff_collected,
+          append=TRUE)
+
+
+outfile_gff_collected_nochr &lt;-
+    here::here(&quot;out&quot;,&quot;gff_ncRNAs_verifiedmRNAparts.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today()),
+        &quot;##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+    path=outfile_gff_collected_nochr)
+write_gff(gff_collected %&gt;% filter(Type != &quot;chromosome&quot;),
+          path=outfile_gff_collected_nochr,
           append=TRUE)</code></pre>
 <div id="gff-with-chromosomes-only" class="section level2">
 <h2>gff with chromosomes only</h2>

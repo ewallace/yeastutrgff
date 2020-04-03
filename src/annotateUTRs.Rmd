@@ -529,6 +529,19 @@ write_gff(gff_collected,
           path=outfile_gff_collected,
           append=TRUE)
 
+
+outfile_gff_collected_nochr <-
+    here::here("out","gff_ncRNAs_verifiedmRNAparts.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
+    path=outfile_gff_collected_nochr)
+write_gff(gff_collected %>% filter(Type != "chromosome"),
+          path=outfile_gff_collected_nochr,
+          append=TRUE)
+
 ```
 
 ## gff with chromosomes only
