@@ -1,6 +1,6 @@
 ##gff-version 3
 ##source-version yeastutrgff
-##date 2020-03-26
+##date 2020-04-03
 ##all introns from nuclear chromosome mRNAs, including 5'UTR introns
 chrI	SGD	intron	87388	87500	.	+	.	Parent=YAL030W_mRNA;Name=YAL030W_intron;orf_classification=Verified
 chrI	SGD	intron	142254	142619	.	+	.	Parent=YAL003W_mRNA;Name=YAL003W_intron;orf_classification=Verified

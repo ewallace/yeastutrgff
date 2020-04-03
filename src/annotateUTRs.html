@@ -388,7 +388,6 @@ summary {
 <li><a href="#collected-gff-with-cds-introns-coding-transcripts-utrs-only">Collected gff with CDS, introns, coding transcripts, UTRs, only</a><ul>
 <li><a href="#gff-with-chromosomes-only">gff with chromosomes only</a></li>
 </ul></li>
-<li><a href="#to-do">To Do</a></li>
 </ul>
 </div>
 
@@ -559,6 +558,8 @@ union_gff_groups &lt;- function(gff_in,...,type=&quot;Union&quot;) {
 </div>
 <div id="load-data-from-gffs" class="section level1">
 <h1>Load data from gffs</h1>
+<p>These are all from <a href="https://www.yeastgenome.org/">SGD</a>, mostly annotation R64-2-1.</p>
+<p>The <code>longest_full-ORF</code> and <code>most_abundant_full-ORF</code> transcript gffs are based on Pelechano 2013’s TIF-seq paper, as updated by SGD and discussed in: <a href="https://doi.org/10.1093/nar/gkz892">Transcriptome visualization and data availability at the Saccharomyces Genome Database</a>.</p>
 <pre class="r"><code>gff_SGDall &lt;- 
     here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
     read_gff()</code></pre>
@@ -583,6 +584,11 @@ gff_5pintrons &lt;-
 
 gff_txs &lt;- 
     here::here(&quot;data&quot;,&quot;longest_full-ORF_transcripts_ypd.gff3&quot;) %&gt;%
+    read_gff() %&gt;%
+    mutate(Gene = gene_from_attr(Attr,before=&quot;ID=&quot;)) 
+
+gff_abundtxs &lt;- 
+    here::here(&quot;data&quot;,&quot;most_abundant_full-ORF_transcripts_ypd.gff3&quot;) %&gt;%
     read_gff() %&gt;%
     mutate(Gene = gene_from_attr(Attr,before=&quot;ID=&quot;)) </code></pre>
 <div id="which-genes-have-5utr-introns-which-have-longest-annotations" class="section level2">
@@ -645,6 +651,11 @@ gff_verCDSunion &lt;-
 gff_join_vCDS_txs &lt;- 
     gff_verCDSunion %&gt;%
     left_join(select(gff_txs, Gene, Seqid, Start, End, Strand,Attr),
+              by=c(&quot;Gene&quot;,&quot;Seqid&quot;,&quot;Strand&quot;), suffix=c(&quot;.CDS&quot;,&quot;.tx&quot;)) 
+
+gff_join_vCDS_abundtxs &lt;- 
+    gff_verCDSunion %&gt;%
+    left_join(select(gff_abundtxs, Gene, Seqid, Start, End, Strand,Attr),
               by=c(&quot;Gene&quot;,&quot;Seqid&quot;,&quot;Strand&quot;), suffix=c(&quot;.CDS&quot;,&quot;.tx&quot;)) </code></pre>
 </div>
 <div id="assign-5-utrs-although-keeping-introns" class="section level1">
@@ -661,12 +672,32 @@ outfile_5UTRs_keepintrons &lt;- here::here(&quot;out&quot;,&quot;longest_five_pr
 
 write_lines(
     x=c(&quot;##gff-version 3&quot;, 
+        &quot;##five prime UTRs from longest_full-ORF_transcripts_ypd.gff3&quot;,
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today())),
     path=outfile_5UTRs_keepintrons)
 
 write_gff(x=gff_5UTRs_keepintrons,
           path=outfile_5UTRs_keepintrons,
+          append=TRUE)</code></pre>
+<pre class="r"><code>gff_abund5UTRs_keepintrons &lt;- 
+    gff_join_vCDS_abundtxs %&gt;%
+    group_by(Gene) %&gt;%
+    do(assign_5UTR(.))  %&gt;%
+    ungroup %&gt;%
+    mutate(Source=&quot;yeastutrgff&quot;)
+
+outfile_abund5UTRs_keepintrons &lt;- here::here(&quot;out&quot;,&quot;abundant_five_prime_UTRs_keepintrons.gff&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##five prime UTRs from most_abundant_full-ORF_transcripts_ypd.gff3&quot;,
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_abund5UTRs_keepintrons)
+
+write_gff(x=gff_abund5UTRs_keepintrons,
+          path=outfile_abund5UTRs_keepintrons,
           append=TRUE)</code></pre>
 </div>
 <div id="assign-3-utrs" class="section level1">
@@ -682,6 +713,7 @@ outfile_3UTRs &lt;- here::here(&quot;out&quot;,&quot;longest_three_prime_UTRs.gf
 
 write_lines(
     x=c(&quot;##gff-version 3&quot;, 
+        &quot;##three prime UTRs from longest_full-ORF_transcripts_ypd.gff3&quot;,
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today())),
     path=outfile_3UTRs)
@@ -689,14 +721,42 @@ write_lines(
 write_gff(x=gff_3UTRs,
           path=outfile_3UTRs,
           append=TRUE)</code></pre>
+<pre class="r"><code>gff_abund3UTRs &lt;- 
+    gff_join_vCDS_abundtxs %&gt;%
+    group_by(Gene) %&gt;%
+    do(assign_3UTR(.)) %&gt;%
+    ungroup %&gt;%
+    mutate(Source=&quot;yeastutrgff&quot;)
+
+outfile_abund3UTRs &lt;- here::here(&quot;out&quot;,&quot;abundant_three_prime_UTRs.gff&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##three prime UTRs from most_abundant_full-ORF_transcripts_ypd.gff3&quot;,
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_abund3UTRs)
+
+write_gff(x=gff_abund3UTRs,
+          path=outfile_abund3UTRs,
+          append=TRUE)</code></pre>
 <div id="remove-introns-from-5utrs-using-bedtools" class="section level2">
 <h2>Remove introns from 5’UTRs using bedtools</h2>
 <pre class="bash"><code>bedtools subtract -s \
 -a ../out/longest_five_prime_UTRs_keepintrons.gff \
 -b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff &gt; \
-../out/longest_five_prime_UTRs_nointrons.gff</code></pre>
+../out/longest_five_prime_UTRs_nointrons.gff
+
+bedtools subtract -s \
+-a ../out/abundant_five_prime_UTRs_keepintrons.gff \
+-b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff &gt; \
+../out/abundant_five_prime_UTRs_nointrons.gff</code></pre>
 <pre class="r"><code>gff_5UTRs_nointrons &lt;- 
     here::here(&quot;out&quot;,&quot;longest_five_prime_UTRs_nointrons.gff&quot;) %&gt;%
+    read_gff()
+
+gff_abund5UTRs_nointrons &lt;- 
+    here::here(&quot;out&quot;,&quot;abundant_five_prime_UTRs_nointrons.gff&quot;) %&gt;%
     read_gff()</code></pre>
 </div>
 </div>
@@ -748,6 +808,30 @@ write_lines(
 write_gff(x=gff_longest_or_CDSext,
           path=outfile_longest_or_CDSext,
           append=TRUE)</code></pre>
+<pre class="r"><code>genes_verified_no_abundanttx &lt;- 
+    setdiff(gff_verCDSext$Gene,gff_txs$Gene)
+
+gff_abundant_or_CDSext &lt;- 
+    bind_rows(gff_abundtxs,
+              gff_verCDSext %&gt;% 
+                  filter(
+                     Gene %in% genes_verified_no_abundanttx)
+              ) %&gt;% 
+    arrange(Gene)
+
+outfile_abundant_or_CDSext &lt;- here::here(
+    &quot;out&quot;,
+    &quot;abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_abundant_or_CDSext)
+
+write_gff(x=gff_abundant_or_CDSext,
+          path=outfile_abundant_or_CDSext,
+          append=TRUE)</code></pre>
 </div>
 <div id="remove-introns-from-cds" class="section level2">
 <h2>Remove introns from CDS?</h2>
@@ -773,7 +857,12 @@ write_gff(gff_allnucmRNAintrons,
 <pre class="bash"><code>bedtools subtract -s \
 -a ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
 -b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff &gt; \
-../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff</code></pre>
+../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff
+
+bedtools subtract -s \
+-a ../out/abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
+-b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff &gt; \
+../out/abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff</code></pre>
 </div>
 </div>
 <div id="collected-gff-with-cds-introns-coding-transcripts-utrs-only" class="section level1">
@@ -789,12 +878,12 @@ write_gff(gff_allnucmRNAintrons,
         gff_allnucmRNAintrons,
         gff_5UTRs_nointrons,
         gff_3UTRs,
-        gff_CDS
+        gff_CDS %&gt;% filter(str_detect(Attr,&quot;Verified&quot;))
     ) %&gt;%
     dplyr::arrange(Seqid,Start,desc(End))
 
 outfile_gff_collected &lt;-
-    here::here(&quot;out&quot;,&quot;gff_Chromosomes_ncRNAs_mRNAparts.gff&quot;)
+    here::here(&quot;out&quot;,&quot;gff_Chromosomes_ncRNAs_verifiedmRNAparts.gff&quot;)
 write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
@@ -825,12 +914,6 @@ write_gff(gff_chromosomesMito,
           path=outfile_gff_chromosomesMito,
           append=TRUE)</code></pre>
 </div>
-</div>
-<div id="to-do" class="section level1">
-<h1>To Do</h1>
-<ul>
-<li>Count Ssd1 reads on different kinds of features</li>
-</ul>
 </div>
 
 

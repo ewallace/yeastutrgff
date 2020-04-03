@@ -183,6 +183,11 @@ union_gff_groups <- function(gff_in,...,type="Union") {
 
 # Load data from gffs
 
+These are all from [SGD](https://www.yeastgenome.org/), mostly annotation R64-2-1.
+
+The `longest_full-ORF` and `most_abundant_full-ORF` transcript gffs are based on Pelechano 2013's TIF-seq paper, as updated by SGD and discussed in:
+[Transcriptome visualization and data availability at the Saccharomyces Genome Database](https://doi.org/10.1093/nar/gkz892).
+
 ```{r load_gffs}
 gff_SGDall <- 
     here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
@@ -200,6 +205,11 @@ gff_5pintrons <-
 
 gff_txs <- 
     here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
+    read_gff() %>%
+    mutate(Gene = gene_from_attr(Attr,before="ID=")) 
+
+gff_abundtxs <- 
+    here::here("data","most_abundant_full-ORF_transcripts_ypd.gff3") %>%
     read_gff() %>%
     mutate(Gene = gene_from_attr(Attr,before="ID=")) 
 ```
@@ -248,6 +258,11 @@ gff_join_vCDS_txs <-
     gff_verCDSunion %>%
     left_join(select(gff_txs, Gene, Seqid, Start, End, Strand,Attr),
               by=c("Gene","Seqid","Strand"), suffix=c(".CDS",".tx")) 
+
+gff_join_vCDS_abundtxs <- 
+    gff_verCDSunion %>%
+    left_join(select(gff_abundtxs, Gene, Seqid, Start, End, Strand,Attr),
+              by=c("Gene","Seqid","Strand"), suffix=c(".CDS",".tx")) 
 ```
 
 # Assign 5' UTRs, although keeping introns
@@ -266,12 +281,35 @@ outfile_5UTRs_keepintrons <- here::here("out","longest_five_prime_UTRs_keepintro
 
 write_lines(
     x=c("##gff-version 3", 
+        "##five prime UTRs from longest_full-ORF_transcripts_ypd.gff3",
         "##source-version yeastutrgff",
         paste("##date",lubridate::today())),
     path=outfile_5UTRs_keepintrons)
 
 write_gff(x=gff_5UTRs_keepintrons,
           path=outfile_5UTRs_keepintrons,
+          append=TRUE)
+```
+
+```{r gff_abund5UTRs_keepintrons,dependson="gff_join"}
+gff_abund5UTRs_keepintrons <- 
+    gff_join_vCDS_abundtxs %>%
+    group_by(Gene) %>%
+    do(assign_5UTR(.))  %>%
+    ungroup %>%
+    mutate(Source="yeastutrgff")
+
+outfile_abund5UTRs_keepintrons <- here::here("out","abundant_five_prime_UTRs_keepintrons.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##five prime UTRs from most_abundant_full-ORF_transcripts_ypd.gff3",
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_abund5UTRs_keepintrons)
+
+write_gff(x=gff_abund5UTRs_keepintrons,
+          path=outfile_abund5UTRs_keepintrons,
           append=TRUE)
 ```
 
@@ -289,12 +327,35 @@ outfile_3UTRs <- here::here("out","longest_three_prime_UTRs.gff")
 
 write_lines(
     x=c("##gff-version 3", 
+        "##three prime UTRs from longest_full-ORF_transcripts_ypd.gff3",
         "##source-version yeastutrgff",
         paste("##date",lubridate::today())),
     path=outfile_3UTRs)
 
 write_gff(x=gff_3UTRs,
           path=outfile_3UTRs,
+          append=TRUE)
+```
+
+```{r gff_abund3UTRs,dependson="gff_join"}
+gff_abund3UTRs <- 
+    gff_join_vCDS_abundtxs %>%
+    group_by(Gene) %>%
+    do(assign_3UTR(.)) %>%
+    ungroup %>%
+    mutate(Source="yeastutrgff")
+
+outfile_abund3UTRs <- here::here("out","abundant_three_prime_UTRs.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##three prime UTRs from most_abundant_full-ORF_transcripts_ypd.gff3",
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_abund3UTRs)
+
+write_gff(x=gff_abund3UTRs,
+          path=outfile_abund3UTRs,
           append=TRUE)
 ```
 
@@ -305,11 +366,20 @@ bedtools subtract -s \
 -a ../out/longest_five_prime_UTRs_keepintrons.gff \
 -b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff > \
 ../out/longest_five_prime_UTRs_nointrons.gff
+
+bedtools subtract -s \
+-a ../out/abundant_five_prime_UTRs_keepintrons.gff \
+-b ../out/five_prime_UTR_introns_R64-2-1_20150113.gff > \
+../out/abundant_five_prime_UTRs_nointrons.gff
 ```
 
 ```{r load_gff_5UTRs_nointrons,dependson=c("gff_5UTRs_keepintrons","bedtools_subtract_5UTRintrons")}
 gff_5UTRs_nointrons <- 
     here::here("out","longest_five_prime_UTRs_nointrons.gff") %>%
+    read_gff()
+
+gff_abund5UTRs_nointrons <- 
+    here::here("out","abundant_five_prime_UTRs_nointrons.gff") %>%
     read_gff()
 ```
 
@@ -367,6 +437,33 @@ write_gff(x=gff_longest_or_CDSext,
           append=TRUE)
 ```
 
+```{r gff_abundant_or_CDSext,dependson="gff_CDS_extend"}
+genes_verified_no_abundanttx <- 
+    setdiff(gff_verCDSext$Gene,gff_txs$Gene)
+
+gff_abundant_or_CDSext <- 
+    bind_rows(gff_abundtxs,
+              gff_verCDSext %>% 
+                  filter(
+                     Gene %in% genes_verified_no_abundanttx)
+              ) %>% 
+    arrange(Gene)
+
+outfile_abundant_or_CDSext <- here::here(
+    "out",
+    "abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_abundant_or_CDSext)
+
+write_gff(x=gff_abundant_or_CDSext,
+          path=outfile_abundant_or_CDSext,
+          append=TRUE)
+```
+
 ## Remove introns from CDS?
 
 ```{r gff_introns}
@@ -395,6 +492,11 @@ bedtools subtract -s \
 -a ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
 -b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff > \
 ../out/longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff
+
+bedtools subtract -s \
+-a ../out/abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
+-b ../out/nuclear_mRNA_introns_R64-2-1_20150113.gff > \
+../out/abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff
 ```
 
 # Collected gff with CDS, introns, coding transcripts, UTRs, only
@@ -411,12 +513,12 @@ gff_collected <-
         gff_allnucmRNAintrons,
         gff_5UTRs_nointrons,
         gff_3UTRs,
-        gff_CDS
+        gff_CDS %>% filter(str_detect(Attr,"Verified"))
     ) %>%
     dplyr::arrange(Seqid,Start,desc(End))
 
 outfile_gff_collected <-
-    here::here("out","gff_Chromosomes_ncRNAs_mRNAparts.gff")
+    here::here("out","gff_Chromosomes_ncRNAs_verifiedmRNAparts.gff")
 write_lines(
     x=c("##gff-version 3", 
         "##source-version yeastutrgff",
@@ -453,8 +555,5 @@ write_gff(gff_chromosomesMito,
 
 ```
 
-# To Do
-
-* Count Ssd1 reads on different kinds of features
 
 

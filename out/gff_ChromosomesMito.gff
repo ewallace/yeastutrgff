@@ -1,6 +1,6 @@
 ##gff-version 3
 ##source-version SGD
-##date 2020-03-27
+##date 2020-04-03
 ##chromosomes only with chrmt replaced by chrMito
 chrI	SGD	chromosome	1	230218	.	.	.	ID=chrI;dbxref=NCBI:NC_001133;Name=chrI
 chrII	SGD	chromosome	1	813184	.	.	.	ID=chrII;dbxref=NCBI:NC_001134;Name=chrII
