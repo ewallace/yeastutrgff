@@ -867,6 +867,7 @@ bedtools subtract -s \
 </div>
 <div id="collected-gff-with-cds-introns-coding-transcripts-utrs-only" class="section level1">
 <h1>Collected gff with CDS, introns, coding transcripts, UTRs, only</h1>
+<p>TO FIX: Parent of CDS should be the same tx.</p>
 <pre class="r"><code>gff_collected &lt;- 
     bind_rows( 
         gff_SGDall %&gt;%
@@ -878,7 +879,9 @@ bedtools subtract -s \
         gff_allnucmRNAintrons,
         gff_5UTRs_nointrons,
         gff_3UTRs,
-        gff_CDS %&gt;% filter(str_detect(Attr,&quot;Verified&quot;))
+        gff_CDS %&gt;% 
+            filter(str_detect(Attr,&quot;Verified&quot;)) %&gt;%
+            mutate(Attr = str_replace(Attr,&quot;Name=&quot;,&quot;ID=&quot;))
     ) %&gt;%
     dplyr::arrange(Seqid,Start,desc(End))
 

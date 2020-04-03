@@ -501,6 +501,8 @@ bedtools subtract -s \
 
 # Collected gff with CDS, introns, coding transcripts, UTRs, only
 
+TO FIX: Parent of CDS should be the same tx.
+
 ```{r gff_collected}
 gff_collected <- 
     bind_rows( 
@@ -513,7 +515,9 @@ gff_collected <-
         gff_allnucmRNAintrons,
         gff_5UTRs_nointrons,
         gff_3UTRs,
-        gff_CDS %>% filter(str_detect(Attr,"Verified"))
+        gff_CDS %>% 
+            filter(str_detect(Attr,"Verified")) %>%
+            mutate(Attr = str_replace(Attr,"Name=","ID="))
     ) %>%
     dplyr::arrange(Seqid,Start,desc(End))
 
