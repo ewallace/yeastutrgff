@@ -250,7 +250,7 @@ Removing dubious ORFs ets that don't have assigned gene names.
 ```{r bayne_targets}
 ssd1_data_bayne2020 <-
     here::here("data","Ssd1_targets",
-               "Ssd1_targets_TPMratio5x_30C_EW30Mar2020.txt") %>%
+               "Ssd1_targets_CPMratio5x_30C_EW30Mar2020.txt") %>%
     readr::read_tsv()
 
 
