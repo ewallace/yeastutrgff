@@ -548,6 +548,29 @@ write_gff(gff_collected %>% filter(Type != "chromosome"),
 
 ```
 
+### Awkward rearrangement of Collected gff for input to featureCounts
+
+featureCounts in the subread package will only quantify reads from one feature type at once in a gff. So this workaround (awkward rearrangement) takes the information in the "type" column and distributes int to "attr".
+
+```{r gff_collected_featureCounts_workaround}
+outfile_gff_collected_nochr_workaround <-
+    here::here("out","gff_ncRNAs_verifiedmRNAparts_typeworkaround.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns",
+        "##workaround for featureCounts putting feature type in attr"),
+    path=outfile_gff_collected_nochr_workaround)
+write_gff(gff_collected %>% 
+              filter(Type != "chromosome") %>%
+              mutate(Attr=paste0(Attr,";FType=",Type)) %>%
+              mutate(Type="transcript_region"),
+          path=outfile_gff_collected_nochr_workaround,
+          append=TRUE)
+```
+
+
 ## gff with chromosomes only
 
 ```{r gff_chromosomesMito}
