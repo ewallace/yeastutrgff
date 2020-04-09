@@ -43,3 +43,7 @@ vignettes/*.pdf
 
 # Mac OS X directory listings
 .DS_Store
+
+# fasta indexes (can be locally rebuilt)
+/data/*.fai
+/out/*.fai
