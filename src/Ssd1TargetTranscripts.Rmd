@@ -285,6 +285,21 @@ venn(Hogan2008=ssd1_targets_hogan2008,
 
 ### What are the genes common to all datasets?
 
+First make a gene-name data frame to show nice gene names:
+
+```{r load_genenames,warning=FALSE,message=FALSE}
+gene_name_df <- 
+  here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
+    read_tsv(col_names=FALSE,comment="#") %>%
+    filter(X3=="gene") %>%
+    transmute(Gene = str_extract(X9,"Name=[\\w-]+") %>%
+                str_remove("Name="),
+              Name = str_extract(X9,"gene=[\\w]+") %>%
+                str_remove("gene="))
+```
+
+Then find the intersection. Generously, we are taking 5x enriched targets in Bayne 2020 at either 30 or 42C.
+
 ```{r Ssd1_10commontargets,results="show"}
 ssd1_targets_10common <- 
     union(ssd1_targets_bayne2020, ssd1_targets_bayne2020_42C) %>%
@@ -292,12 +307,15 @@ ssd1_targets_10common <-
     intersect(ssd1_targets_jansen2009) %>%
     intersect(ssd1_targets_hose2020)
     
-ssd1_targets_10common
+filter(gene_name_df,Gene %in% ssd1_targets_10common)
 ```
 
 
-## Smaller Venn diagram of intersections with our data
+## Smaller Venn diagrams of intersections with our data
 
+Only including the more conservative Hogan 2008 and Jansen 2009.
+
+### Hogan 2008 vs Jansen 2009 vs Bayne 30C
 
 ```{r venn_hogan_jansen_bayne,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=4,fig.height=3.8}
 venn(Hogan2008=ssd1_targets_hogan2008,
@@ -306,6 +324,7 @@ venn(Hogan2008=ssd1_targets_hogan2008,
      Bayne5x30C=ssd1_targets_bayne2020)
 ```
 
+### Hogan vs 30C vs 42C
 
 ```{r venn_hogan_bayne_2temps,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=4,fig.height=3.8}
 venn(Hogan2008=ssd1_targets_hogan2008,
