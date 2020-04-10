@@ -386,8 +386,10 @@ summary {
 <li><a href="#remove-introns-from-longest-transcripts-using-bedtools">Remove introns from longest transcripts using bedtools</a></li>
 </ul></li>
 <li><a href="#collected-gff-with-cds-introns-coding-transcripts-utrs-only">Collected gff with CDS, introns, coding transcripts, UTRs, only</a><ul>
+<li><a href="#awkward-rearrangement-of-collected-gff-for-input-to-featurecounts">Awkward rearrangement of Collected gff for input to featureCounts</a></li>
 <li><a href="#gff-with-chromosomes-only">gff with chromosomes only</a></li>
 </ul></li>
+<li><a href="#test-data-for-riboviz">Test data for riboviz</a></li>
 </ul>
 </div>
 
@@ -425,7 +427,7 @@ write_gff &lt;- function(x,path,...) {
 }
 
 gene_from_attr &lt;- function(attr_string,
-                           before=&quot;Name=&quot;,gene_str=&quot;[\\w-]+&quot;,after=&quot;_&quot;) {
+                           before=&quot;Name=&quot;,gene_str=&quot;[A-Z0-9-]+&quot;,after=&quot;_&quot;) {
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
     attr_string %&gt;%
@@ -580,7 +582,7 @@ union_gff_groups &lt;- function(gff_in,...,type=&quot;Union&quot;) {
 gff_5pintrons &lt;- 
     gff_SGDall %&gt;% 
     filter(Type==&quot;five_prime_UTR_intron&quot;) %&gt;%
-    mutate(Gene = gene_from_attr(Attr,after=&quot;_five_prime_UTR_intron&quot;)) 
+    mutate(Gene = gene_from_attr(Attr)) 
 
 gff_txs &lt;- 
     here::here(&quot;data&quot;,&quot;longest_full-ORF_transcripts_ypd.gff3&quot;) %&gt;%
@@ -838,7 +840,7 @@ write_gff(x=gff_abundant_or_CDSext,
 <pre class="r"><code>gff_allnucmRNAintrons &lt;- 
     gff_SGDall %&gt;% 
     filter(str_detect(Type,&quot;intron&quot;),str_detect(Attr,&quot;Parent=Y&quot;)) %&gt;%
-    mutate(Gene = gene_from_attr(Attr,after=&quot;_intron&quot;)) 
+    mutate(Gene = gene_from_attr(Attr)) 
 
 outfile_nucmRNA_introns &lt;-
     here::here(&quot;out&quot;,&quot;nuclear_mRNA_introns_R64-2-1_20150113.gff&quot;)
@@ -868,21 +870,49 @@ bedtools subtract -s \
 <div id="collected-gff-with-cds-introns-coding-transcripts-utrs-only" class="section level1">
 <h1>Collected gff with CDS, introns, coding transcripts, UTRs, only</h1>
 <p>TO FIX: Parent of CDS should be the same tx.</p>
-<pre class="r"><code>gff_collected &lt;- 
-    bind_rows( 
-        gff_SGDall %&gt;%
+<pre class="r"><code>gff_SGD_chromosomes_ncRNA &lt;-
+    gff_SGDall %&gt;%
             filter( Type %in% 
                         c(&quot;chromosome&quot;,
                           &quot;rRNA_gene&quot;,&quot;ncRNA_gene&quot;,&quot;telomerase_RNA_gene&quot;,
                           &quot;snoRNA_gene&quot;,&quot;snRNA_gene&quot;,&quot;tRNA_gene&quot;)
-            ),
-        gff_allnucmRNAintrons,
-        gff_5UTRs_nointrons,
-        gff_3UTRs,
+            )
+
+replace_parent &lt;- function(df,niceType=&quot;five_prime_UTR&quot;) {
+    NiceParent &lt;- filter(df, Type==niceType) %&gt;%
+        pull(Attr) %&gt;%
+        head(n=1) %&gt;%
+        str_extract(&quot;Parent=[\\w-]+&quot;) %&gt;%
+        str_remove(&quot;Parent=&quot;)
+    df %&gt;%
+        mutate(Attr=
+               str_replace(Attr,
+                           &quot;Parent=[\\w-]+&quot;,
+                           paste0(&quot;Parent=&quot;,NiceParent) )
+        ) %&gt;%
+        return()
+}
+
+# gff_collected_mRNA %&gt;% filter(Gene==&quot;YFL039C&quot;) %&gt;% replace_parent
+
+gff_collected_mRNA &lt;- 
+    bind_rows( 
+        gff_allnucmRNAintrons  %&gt;%
+            mutate(Attr = str_replace(Attr,&quot;Name=&quot;,&quot;ID=&quot;)),
+        gff_5UTRs_nointrons %&gt;%
+            mutate(Gene=gene_from_attr(Attr,before=&quot;ID=&quot;)),
+        gff_3UTRs %&gt;%
+            mutate(Gene=gene_from_attr(Attr,before=&quot;ID=&quot;)),
         gff_CDS %&gt;% 
             filter(str_detect(Attr,&quot;Verified&quot;)) %&gt;%
             mutate(Attr = str_replace(Attr,&quot;Name=&quot;,&quot;ID=&quot;))
     ) %&gt;%
+    dplyr::arrange(Seqid,Start,desc(End)) %&gt;%
+    group_by(Gene) %&gt;%
+    do(replace_parent(.))
+
+gff_collected &lt;- bind_rows(gff_SGD_chromosomes_ncRNA,
+                           gff_collected_mRNA) %&gt;%
     dplyr::arrange(Seqid,Start,desc(End))
 
 outfile_gff_collected &lt;-
@@ -909,6 +939,26 @@ write_lines(
 write_gff(gff_collected %&gt;% filter(Type != &quot;chromosome&quot;),
           path=outfile_gff_collected_nochr,
           append=TRUE)</code></pre>
+<div id="awkward-rearrangement-of-collected-gff-for-input-to-featurecounts" class="section level3">
+<h3>Awkward rearrangement of Collected gff for input to featureCounts</h3>
+<p>featureCounts in the subread package will only quantify reads from one feature type at once in a gff. So this workaround (awkward rearrangement) takes the information in the “type” column and distributes int to “attr”.</p>
+<p>UPDATE: didn’t work, featureCounts crashed ofr an unknown reason.</p>
+<pre class="r"><code>outfile_gff_collected_nochr_workaround &lt;-
+    here::here(&quot;out&quot;,&quot;gff_ncRNAs_verifiedmRNAparts_typeworkaround.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today()),
+        &quot;##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;,
+        &quot;##workaround for featureCounts putting feature type in attr&quot;),
+    path=outfile_gff_collected_nochr_workaround)
+write_gff(gff_collected %&gt;% 
+              filter(Type != &quot;chromosome&quot;) %&gt;%
+              mutate(Attr=paste0(Attr,&quot;;FType=&quot;,Type)) %&gt;%
+              mutate(Type=&quot;transcript_region&quot;),
+          path=outfile_gff_collected_nochr_workaround,
+          append=TRUE)</code></pre>
+</div>
 <div id="gff-with-chromosomes-only" class="section level2">
 <h2>gff with chromosomes only</h2>
 <pre class="r"><code>gff_chromosomesMito &lt;- 
@@ -930,6 +980,65 @@ write_gff(gff_chromosomesMito,
           path=outfile_gff_chromosomesMito,
           append=TRUE)</code></pre>
 </div>
+</div>
+<div id="test-data-for-riboviz" class="section level1">
+<h1>Test data for riboviz</h1>
+<p>This last part is to produce small test data files that we can use to specify and test a better transcript-generating code in riboviz, see <a href="https://github.com/riboviz/riboviz/issues/74">riboviz issue #74</a>.</p>
+<p>chromosomeI, 130000:152000, excluding a dubious ORF that was more trouble than it is worth to include.</p>
+<pre class="r"><code>gff_testregion_YAL10 &lt;- gff_SGDall %&gt;%
+    filter(Seqid==&quot;chrI&quot;,
+           Start &gt; 130000, 
+           Start &lt; 151100,
+           !str_detect(Attr,&quot;YAL004W&quot;))
+
+outfile_gfftestregion_YAL10 &lt;-
+    here::here(&quot;out&quot;,&quot;riboviz_test&quot;,
+               &quot;saccharomyces_cerevisiae_R64-2-1_20150113_YAL10all.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
+        paste(&quot;##subset by Edward Wallace &quot;,lubridate::today())
+        ),
+    path=outfile_gfftestregion_YAL10)
+write_gff(gff_testregion_YAL10,
+          path=outfile_gfftestregion_YAL10,
+          append=TRUE)
+
+# gff_testregion_YAL10fixedext &lt;-
+#     gff_testregion_YAL10 %&gt;%
+#     filter(Type==&quot;CDS&quot;) %&gt;%
+#     
+# 
+# outfile_gfftestregion_YAL10CDSfixedext &lt;-
+#     here::here(&quot;out&quot;,&quot;riboviz_test&quot;,
+#                &quot;saccharomyces_cerevisiae_R64-2-1_20150113_YALCDS.gff&quot;)
+# write_lines(
+#     x=c(&quot;##gff-version 3&quot;, 
+#         &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
+#         paste(&quot;##subset by Edward Wallace &quot;,lubridate::today())
+#         ),
+#     path=outfile_gfftestregion_YAL10CDSfixedext)
+# write_gff(gff_testregion_YAL10fixedext,
+#           path=outfile_gfftestregion_YAL10CDSfixedext,
+#           append=TRUE)</code></pre>
+<pre class="r"><code>gff_testregion_YBL72ish &lt;- gff_collected %&gt;%
+    filter(Seqid==&quot;chrII&quot;,
+           Start &gt; 45000, 
+           End &lt; 89500)
+
+outfile_gfftestregion_YBL72ish &lt;-
+    here::here(&quot;out&quot;,&quot;riboviz_test&quot;,
+               &quot;saccharomyces_cerevisiae_R64-2-1_withUTRs_YBL72ish.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
+        paste(&quot;##source-version yeastutrgff&quot;,lubridate::today()),
+        &quot;##subset by Edward Wallace: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;
+        ),
+    path=outfile_gfftestregion_YBL72ish)
+write_gff(gff_testregion_YBL72ish,
+          path=outfile_gfftestregion_YBL72ish,
+          append=TRUE)</code></pre>
 </div>
 
 

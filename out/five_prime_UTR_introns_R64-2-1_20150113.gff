@@ -1,6 +1,6 @@
 ##gff-version 3
 ##source-version yeastutrgff
-##date 2020-04-03
+##date 2020-04-10
 chrII	SGD	five_prime_UTR_intron	45645	45977	.	+	.	Parent=YBL092W_mRNA;Name=YBL092W_five_prime_UTR_intron;orf_classification=Verified
 chrII	SGD	five_prime_UTR_intron	89133	89440	.	-	.	Parent=YBL072C_mRNA;Name=YBL072C_five_prime_UTR_intron;orf_classification=Verified
 chrII	SGD	five_prime_UTR_intron	426517	426873	.	-	.	Parent=YBR089C-A_mRNA;Name=YBR089C-A_five_prime_UTR_intron;orf_classification=Verified

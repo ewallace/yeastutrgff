@@ -1,7 +1,7 @@
 ##gff-version 3
 ##five prime UTRs from most_abundant_full-ORF_transcripts_ypd.gff3
 ##source-version yeastutrgff
-##date 2020-04-03
+##date 2020-04-10
 chrI	yeastutrgff	five_prime_UTR	151167	151191	.	-	.	ID=YAL001C_25nt_5UTR;Parent=YAL001C_tx0
 chrI	yeastutrgff	five_prime_UTR	143682	143706	.	+	.	ID=YAL002W_25nt_5UTR;Parent=YAL002W_tx0
 chrI	yeastutrgff	five_prime_UTR	142153	142173	.	+	.	ID=YAL003W_id526_5UTR;Parent=YAL003W_id526

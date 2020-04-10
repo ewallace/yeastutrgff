@@ -49,7 +49,7 @@ write_gff <- function(x,path,...) {
 }
 
 gene_from_attr <- function(attr_string,
-                           before="Name=",gene_str="[\\w-]+",after="_") {
+                           before="Name=",gene_str="[A-Z0-9-]+",after="_") {
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
     attr_string %>%
@@ -201,7 +201,7 @@ gff_CDS <-
 gff_5pintrons <- 
     gff_SGDall %>% 
     filter(Type=="five_prime_UTR_intron") %>%
-    mutate(Gene = gene_from_attr(Attr,after="_five_prime_UTR_intron")) 
+    mutate(Gene = gene_from_attr(Attr)) 
 
 gff_txs <- 
     here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
@@ -470,7 +470,7 @@ write_gff(x=gff_abundant_or_CDSext,
 gff_allnucmRNAintrons <- 
     gff_SGDall %>% 
     filter(str_detect(Type,"intron"),str_detect(Attr,"Parent=Y")) %>%
-    mutate(Gene = gene_from_attr(Attr,after="_intron")) 
+    mutate(Gene = gene_from_attr(Attr)) 
 
 outfile_nucmRNA_introns <-
     here::here("out","nuclear_mRNA_introns_R64-2-1_20150113.gff")
@@ -504,21 +504,49 @@ bedtools subtract -s \
 TO FIX: Parent of CDS should be the same tx.
 
 ```{r gff_collected}
-gff_collected <- 
-    bind_rows( 
-        gff_SGDall %>%
+gff_SGD_chromosomes_ncRNA <-
+    gff_SGDall %>%
             filter( Type %in% 
                         c("chromosome",
                           "rRNA_gene","ncRNA_gene","telomerase_RNA_gene",
                           "snoRNA_gene","snRNA_gene","tRNA_gene")
-            ),
-        gff_allnucmRNAintrons,
-        gff_5UTRs_nointrons,
-        gff_3UTRs,
+            )
+
+replace_parent <- function(df,niceType="five_prime_UTR") {
+    NiceParent <- filter(df, Type==niceType) %>%
+        pull(Attr) %>%
+        head(n=1) %>%
+        str_extract("Parent=[\\w-]+") %>%
+        str_remove("Parent=")
+    df %>%
+        mutate(Attr=
+               str_replace(Attr,
+                           "Parent=[\\w-]+",
+                           paste0("Parent=",NiceParent) )
+        ) %>%
+        return()
+}
+
+# gff_collected_mRNA %>% filter(Gene=="YFL039C") %>% replace_parent
+
+gff_collected_mRNA <- 
+    bind_rows( 
+        gff_allnucmRNAintrons  %>%
+            mutate(Attr = str_replace(Attr,"Name=","ID=")),
+        gff_5UTRs_nointrons %>%
+            mutate(Gene=gene_from_attr(Attr,before="ID=")),
+        gff_3UTRs %>%
+            mutate(Gene=gene_from_attr(Attr,before="ID=")),
         gff_CDS %>% 
             filter(str_detect(Attr,"Verified")) %>%
             mutate(Attr = str_replace(Attr,"Name=","ID="))
     ) %>%
+    dplyr::arrange(Seqid,Start,desc(End)) %>%
+    group_by(Gene) %>%
+    do(replace_parent(.))
+
+gff_collected <- bind_rows(gff_SGD_chromosomes_ncRNA,
+                           gff_collected_mRNA) %>%
     dplyr::arrange(Seqid,Start,desc(End))
 
 outfile_gff_collected <-
@@ -551,6 +579,8 @@ write_gff(gff_collected %>% filter(Type != "chromosome"),
 ### Awkward rearrangement of Collected gff for input to featureCounts
 
 featureCounts in the subread package will only quantify reads from one feature type at once in a gff. So this workaround (awkward rearrangement) takes the information in the "type" column and distributes int to "attr".
+
+UPDATE: didn't work, featureCounts crashed ofr an unknown reason.
 
 ```{r gff_collected_featureCounts_workaround}
 outfile_gff_collected_nochr_workaround <-
@@ -596,4 +626,70 @@ write_gff(gff_chromosomesMito,
 ```
 
 
+# Test data for riboviz
 
+This last part is to produce small test data files that we can use to specify and test a better transcript-generating code in riboviz, see [riboviz issue #74](https://github.com/riboviz/riboviz/issues/74).
+
+chromosomeI, 130000:152000, excluding a dubious ORF that was more trouble than it is worth to include.
+
+```{r rv_testregion_YAL10}
+gff_testregion_YAL10 <- gff_SGDall %>%
+    filter(Seqid=="chrI",
+           Start > 130000, 
+           Start < 151100,
+           !str_detect(Attr,"YAL004W"))
+
+outfile_gfftestregion_YAL10 <-
+    here::here("out","riboviz_test",
+               "saccharomyces_cerevisiae_R64-2-1_20150113_YAL10all.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version SGD R64-2-1, 2015-01-13",
+        paste("##subset by Edward Wallace ",lubridate::today())
+        ),
+    path=outfile_gfftestregion_YAL10)
+write_gff(gff_testregion_YAL10,
+          path=outfile_gfftestregion_YAL10,
+          append=TRUE)
+
+# gff_testregion_YAL10fixedext <-
+#     gff_testregion_YAL10 %>%
+#     filter(Type=="CDS") %>%
+#     
+# 
+# outfile_gfftestregion_YAL10CDSfixedext <-
+#     here::here("out","riboviz_test",
+#                "saccharomyces_cerevisiae_R64-2-1_20150113_YALCDS.gff")
+# write_lines(
+#     x=c("##gff-version 3", 
+#         "##source-version SGD R64-2-1, 2015-01-13",
+#         paste("##subset by Edward Wallace ",lubridate::today())
+#         ),
+#     path=outfile_gfftestregion_YAL10CDSfixedext)
+# write_gff(gff_testregion_YAL10fixedext,
+#           path=outfile_gfftestregion_YAL10CDSfixedext,
+#           append=TRUE)
+
+```
+
+```{r rv_testregion_YBL72ish}
+gff_testregion_YBL72ish <- gff_collected %>%
+    filter(Seqid=="chrII",
+           Start > 45000, 
+           End < 89500)
+
+outfile_gfftestregion_YBL72ish <-
+    here::here("out","riboviz_test",
+               "saccharomyces_cerevisiae_R64-2-1_withUTRs_YBL72ish.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version SGD R64-2-1, 2015-01-13",
+        paste("##source-version yeastutrgff",lubridate::today()),
+        "##subset by Edward Wallace: ncRNA, CDS, 5'UTRs, 3'UTRs, introns"
+        ),
+    path=outfile_gfftestregion_YBL72ish)
+write_gff(gff_testregion_YBL72ish,
+          path=outfile_gfftestregion_YBL72ish,
+          append=TRUE)
+
+```
