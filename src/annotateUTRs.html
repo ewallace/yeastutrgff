@@ -389,6 +389,7 @@ summary {
 <li><a href="#awkward-rearrangement-of-collected-gff-for-input-to-featurecounts">Awkward rearrangement of Collected gff for input to featureCounts</a></li>
 <li><a href="#gff-with-chromosomes-only">gff with chromosomes only</a></li>
 </ul></li>
+<li><a href="#transcript-gff-with-utrs-and-cds">Transcript gff with UTRs and CDS</a></li>
 <li><a href="#test-data-for-riboviz">Test data for riboviz</a></li>
 </ul>
 </div>
@@ -430,11 +431,17 @@ gene_from_attr &lt;- function(attr_string,
                            before=&quot;Name=&quot;,gene_str=&quot;[A-Z0-9-]+&quot;,after=&quot;_&quot;) {
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
-    attr_string %&gt;%
-        str_extract(match_str) %&gt;%
-        str_remove(before) %&gt;%
-        str_remove(after)
+    out_strs &lt;- attr_string %&gt;%
+        str_extract(match_str) 
+    if (nchar(before) &gt; 0 ){
+        out_strs &lt;- str_remove(out_strs,before)
+    }
+    if (nchar(after) &gt; 0 ){
+        out_strs &lt;- str_remove(out_strs,after)
+    }
+    return(out_strs)
 }
+
 # test_bit &lt;- gff_CDS$attr[1]
 # gene_from_attr(test_bit)
 
@@ -556,6 +563,47 @@ union_gff_groups &lt;- function(gff_in,...,type=&quot;Union&quot;) {
             Phase=NA,
             Attr=unique(Attr)
         )
+}
+
+replace_parent &lt;- function(df,niceType=&quot;five_prime_UTR&quot;) {
+    NiceParent &lt;- filter(df, Type==niceType) %&gt;%
+        pull(Attr) %&gt;%
+        head(n=1) %&gt;%
+        str_extract(&quot;Parent=[\\w-]+&quot;) %&gt;%
+        str_remove(&quot;Parent=&quot;)
+    df %&gt;%
+        mutate(Attr=
+               str_replace(Attr,
+                           &quot;Parent=[\\w-]+&quot;,
+                           paste0(&quot;Parent=&quot;,NiceParent) )
+        ) %&gt;%
+        return()
+}</code></pre>
+<pre class="r"><code>txgff_frompartlength_1 &lt;- function(partlengthdf) {
+    L_five_prime_UTR &lt;- partlengthdf$five_prime_UTR
+    L_CDS &lt;- partlengthdf$CDS
+    L_three_prime_UTR &lt;- partlengthdf$three_prime_UTR
+    Parent &lt;- partlengthdf$Parent
+    Gene &lt;- partlengthdf$Gene
+    txgff1 &lt;- tibble(
+        Seqid = rep(Parent,3),
+        Type = c(&quot;five_prime_UTR&quot;,
+                 &quot;CDS&quot;,
+                 &quot;three_prime_UTR&quot;),
+        Start = c(1, 
+                  L_five_prime_UTR + 1, 
+                  L_five_prime_UTR + L_CDS + 1),
+        End = c( L_five_prime_UTR, 
+                 L_five_prime_UTR + L_CDS,
+                 L_five_prime_UTR + L_CDS + L_three_prime_UTR),
+        Phase = c( NA, 
+                   0,
+                   NA),
+        Attr = c(paste0(&quot;ID=&quot;,Parent,&quot;_five_prime_UTR&quot;),
+                 paste0(&quot;ID=&quot;,Gene,&quot;_CDS&quot;),
+                 paste0(&quot;ID=&quot;,Parent,&quot;_three_prime_UTR&quot;) )
+    )
+    return(txgff1)
 }</code></pre>
 </div>
 <div id="load-data-from-gffs" class="section level1">
@@ -869,7 +917,7 @@ bedtools subtract -s \
 </div>
 <div id="collected-gff-with-cds-introns-coding-transcripts-utrs-only" class="section level1">
 <h1>Collected gff with CDS, introns, coding transcripts, UTRs, only</h1>
-<p>TO FIX: Parent of CDS should be the same tx.</p>
+<p>FIXED: Parent of CDS should be the same tx as UTRs.</p>
 <pre class="r"><code>gff_SGD_chromosomes_ncRNA &lt;-
     gff_SGDall %&gt;%
             filter( Type %in% 
@@ -877,21 +925,6 @@ bedtools subtract -s \
                           &quot;rRNA_gene&quot;,&quot;ncRNA_gene&quot;,&quot;telomerase_RNA_gene&quot;,
                           &quot;snoRNA_gene&quot;,&quot;snRNA_gene&quot;,&quot;tRNA_gene&quot;)
             )
-
-replace_parent &lt;- function(df,niceType=&quot;five_prime_UTR&quot;) {
-    NiceParent &lt;- filter(df, Type==niceType) %&gt;%
-        pull(Attr) %&gt;%
-        head(n=1) %&gt;%
-        str_extract(&quot;Parent=[\\w-]+&quot;) %&gt;%
-        str_remove(&quot;Parent=&quot;)
-    df %&gt;%
-        mutate(Attr=
-               str_replace(Attr,
-                           &quot;Parent=[\\w-]+&quot;,
-                           paste0(&quot;Parent=&quot;,NiceParent) )
-        ) %&gt;%
-        return()
-}
 
 # gff_collected_mRNA %&gt;% filter(Gene==&quot;YFL039C&quot;) %&gt;% replace_parent
 
@@ -942,7 +975,7 @@ write_gff(gff_collected %&gt;% filter(Type != &quot;chromosome&quot;),
 <div id="awkward-rearrangement-of-collected-gff-for-input-to-featurecounts" class="section level3">
 <h3>Awkward rearrangement of Collected gff for input to featureCounts</h3>
 <p>featureCounts in the subread package will only quantify reads from one feature type at once in a gff. So this workaround (awkward rearrangement) takes the information in the “type” column and distributes int to “attr”.</p>
-<p>UPDATE: didn’t work, featureCounts crashed ofr an unknown reason.</p>
+<p>UPDATE: didn’t work, featureCounts crashed for an unknown reason.</p>
 <pre class="r"><code>outfile_gff_collected_nochr_workaround &lt;-
     here::here(&quot;out&quot;,&quot;gff_ncRNAs_verifiedmRNAparts_typeworkaround.gff&quot;)
 write_lines(
@@ -980,6 +1013,35 @@ write_gff(gff_chromosomesMito,
           path=outfile_gff_chromosomesMito,
           append=TRUE)</code></pre>
 </div>
+</div>
+<div id="transcript-gff-with-utrs-and-cds" class="section level1">
+<h1>Transcript gff with UTRs and CDS</h1>
+<p>We do this here with a call to spread (sim to pivot_long), and then a sort of hand-coded spread thing by gene, which is awkward.</p>
+<pre class="r"><code>txpartlength_mRNA &lt;- 
+    gff_collected %&gt;%
+    filter(Seqid != &quot;chrmt&quot;, Type %in% c(&quot;five_prime_UTR&quot;,&quot;CDS&quot;,&quot;three_prime_UTR&quot;)) %&gt;%
+    mutate(Parent=gene_from_attr(Attr,before=&quot;Parent=&quot;,gene_str = &quot;[\\w-_]+&quot;,after=&quot;&quot;)) %&gt;%
+    group_by(Gene,Type,Parent) %&gt;%
+    summarise(Length = sum(End-Start+1)) %&gt;%
+    spread(key=Type, value=Length)
+
+txgff_collected &lt;- 
+    txpartlength_mRNA %&gt;%
+    group_by(Gene) %&gt;%
+    do(txgff_frompartlength_1(.)) %&gt;%
+    mutate(Source=&quot;yeastutrgff&quot;,Score=NA,Strand=&quot;+&quot;)
+
+outfile_txgff_collected &lt;-
+    here::here(&quot;out&quot;,
+               &quot;transcriptcentric_longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;,
+        paste(&quot;##source-version yeastutrgff &quot;,lubridate::today())
+        ),
+    path=outfile_txgff_collected)
+write_gff(txgff_collected,
+          path=outfile_txgff_collected,
+          append=TRUE)</code></pre>
 </div>
 <div id="test-data-for-riboviz" class="section level1">
 <h1>Test data for riboviz</h1>
@@ -1021,6 +1083,35 @@ write_gff(gff_testregion_YAL10,
 # write_gff(gff_testregion_YAL10fixedext,
 #           path=outfile_gfftestregion_YAL10CDSfixedext,
 #           append=TRUE)</code></pre>
+<pre class="r"><code>txgff_testregion_YAL10 &lt;- 
+    gff_testregion_YAL10 %&gt;%
+    filter(Type==&quot;CDS&quot;) %&gt;%
+    mutate(Name=gene_from_attr(Attr,before=&quot;Name=&quot;,gene_str = &quot;[\\w-_]+&quot;,after=&quot;;&quot;),
+           Parent=gene_from_attr(Attr,before=&quot;Parent=&quot;,gene_str = &quot;[\\w-_]+&quot;,after=&quot;;&quot;),
+           Length=End-Start+1) %&gt;%
+    group_by(Name) %&gt;%
+    summarize(Seqid=unique(Parent),
+              Source=&quot;yeastutrgff&quot;,
+              Type=&quot;CDS&quot;,
+              Start=19,
+              End=sum(Length)+ 18,
+              Score=NA,
+              Strand=&quot;+&quot;,
+              Phase=0) %&gt;%
+    mutate(Attr=paste(&quot;Name=&quot;,Name))
+
+outfile_txgfftestregion_YAL10 &lt;-
+    here::here(&quot;out&quot;,&quot;riboviz_test&quot;,
+               &quot;YAL10_transcriptsfixed_R64-2-1_left18_right15.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
+        paste(&quot;##subset by Edward Wallace, yeastutrgff&quot;,lubridate::today())
+        ),
+    path=outfile_txgfftestregion_YAL10)
+write_gff(txgff_testregion_YAL10,
+          path=outfile_txgfftestregion_YAL10,
+          append=TRUE)</code></pre>
 <pre class="r"><code>gff_testregion_YBL72ish &lt;- gff_collected %&gt;%
     filter(Seqid==&quot;chrII&quot;,
            Start &gt; 45000, 
