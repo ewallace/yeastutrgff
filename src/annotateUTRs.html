@@ -1208,6 +1208,22 @@ write_lines(
 write_gff(gff_testregion_YBL72ish,
           path=outfile_gfftestregion_YBL72ish,
           append=TRUE)</code></pre>
+<pre class="r"><code>txgff_testregion_YBL72ish &lt;- 
+    txgff_abundantcollected %&gt;%
+    filter(Gene %in% unique(gff_testregion_YBL72ish$Gene), !is.na(Gene))
+
+outfile_txgfftestregion_YBL72ish &lt;-
+    here::here(&quot;out&quot;,&quot;riboviz_test&quot;,
+               &quot;YBL72ish_transcripts_withUTRs.gff&quot;)
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
+        paste(&quot;##subset by Edward Wallace, yeastutrgff&quot;,lubridate::today())
+        ),
+    path=outfile_txgfftestregion_YBL72ish )
+write_gff(txgff_testregion_YBL72ish,
+          path=outfile_txgfftestregion_YBL72ish,
+          append=TRUE)</code></pre>
 </div>
 
 
