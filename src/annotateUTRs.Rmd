@@ -554,7 +554,7 @@ bedtools subtract -s \
 
 FIXED: Parent of CDS should be the same tx as UTRs.
 
-```{r gff_collected,dependson=c("load_gffs","gff_introns","load_gff_5UTRs_nointrons","gff_3UTRs")}
+```{r gff_longestcollected,dependson=c("load_gffs","gff_introns","load_gff_5UTRs_nointrons","gff_3UTRs")}
 gff_SGD_chromosomes_ncRNA <-
     gff_SGDall %>%
             filter( Type %in% 
@@ -563,9 +563,9 @@ gff_SGD_chromosomes_ncRNA <-
                           "snoRNA_gene","snRNA_gene","tRNA_gene")
             )
 
-# gff_collected_mRNA %>% filter(Gene=="YFL039C") %>% replace_parent
+# gff_longestcollected_mRNA %>% filter(Gene=="YFL039C") %>% replace_parent
 
-gff_collected_mRNA <- 
+gff_longestcollected_mRNA <- 
     bind_rows( 
         gff_allnucmRNAintrons  %>%
             mutate(Attr = str_replace(Attr,"Name=","ID=")),
@@ -581,33 +581,33 @@ gff_collected_mRNA <-
     group_by(Gene) %>%
     do(replace_parent(.))
 
-gff_collected <- bind_rows(gff_SGD_chromosomes_ncRNA,
-                           gff_collected_mRNA) %>%
+gff_longestcollected <- bind_rows(gff_SGD_chromosomes_ncRNA,
+                           gff_longestcollected_mRNA) %>%
     dplyr::arrange(Seqid,Start,desc(End))
 
-outfile_gff_collected <-
-    here::here("out","gff_Chromosomes_ncRNAs_verifiedmRNAparts.gff")
+outfile_gff_longestcollected <-
+    here::here("out","gff_Chromosomes_ncRNAs_longestverifiedmRNAparts.gff")
 write_lines(
     x=c("##gff-version 3", 
         "##source-version yeastutrgff",
         paste("##date",lubridate::today()),
         "##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
-    path=outfile_gff_collected)
-write_gff(gff_collected,
-          path=outfile_gff_collected,
+    path=outfile_gff_longestcollected)
+write_gff(gff_longestcollected,
+          path=outfile_gff_longestcollected,
           append=TRUE)
 
 
-outfile_gff_collected_nochr <-
-    here::here("out","gff_ncRNAs_verifiedmRNAparts.gff")
+outfile_gff_longestcollected_nochr <-
+    here::here("out","gff_ncRNAs_longestverifiedmRNAparts.gff")
 write_lines(
     x=c("##gff-version 3", 
         "##source-version yeastutrgff",
         paste("##date",lubridate::today()),
         "##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
-    path=outfile_gff_collected_nochr)
-write_gff(gff_collected %>% filter(Type != "chromosome"),
-          path=outfile_gff_collected_nochr,
+    path=outfile_gff_longestcollected_nochr)
+write_gff(gff_longestcollected %>% filter(Type != "chromosome"),
+          path=outfile_gff_longestcollected_nochr,
           append=TRUE)
 
 ```
@@ -618,21 +618,21 @@ featureCounts in the subread package will only quantify reads from one feature t
 
 UPDATE: didn't work, featureCounts crashed for an unknown reason.
 
-```{r gff_collected_featureCounts_workaround,dependson="gff_collected"}
-outfile_gff_collected_nochr_workaround <-
-    here::here("out","gff_ncRNAs_verifiedmRNAparts_typeworkaround.gff")
+```{r gff_longestcollected_featureCounts_workaround,dependson="gff_longestcollected"}
+outfile_gff_longestcollected_nochr_workaround <-
+    here::here("out","gff_ncRNAs_longestverifiedmRNAparts_typeworkaround.gff")
 write_lines(
     x=c("##gff-version 3", 
         "##source-version yeastutrgff",
         paste("##date",lubridate::today()),
         "##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns",
         "##workaround for featureCounts putting feature type in attr"),
-    path=outfile_gff_collected_nochr_workaround)
-write_gff(gff_collected %>% 
+    path=outfile_gff_longestcollected_nochr_workaround)
+write_gff(gff_longestcollected %>% 
               filter(Type != "chromosome") %>%
               mutate(Attr=paste0(Attr,";FType=",Type)) %>%
               mutate(Type="transcript_region"),
-          path=outfile_gff_collected_nochr_workaround,
+          path=outfile_gff_longestcollected_nochr_workaround,
           append=TRUE)
 ```
 
@@ -665,31 +665,31 @@ write_gff(gff_chromosomesMito,
 
 We do this here with a call to spread (sim to pivot_long), and then a sort of hand-coded spread thing by gene, which is awkward.
 
-```{r txgff_collected,dependson=c("gff_collected","txgff_functions")}
+```{r txgff_longestcollected,dependson=c("gff_longestcollected","txgff_functions")}
 txpartlength_mRNA <- 
-    gff_collected %>%
+    gff_longestcollected %>%
     filter(Seqid != "chrmt", Type %in% c("five_prime_UTR","CDS","three_prime_UTR")) %>%
     mutate(Parent=gene_from_attr(Attr,before="Parent=",gene_str = "[\\w-_]+",after="")) %>%
     group_by(Gene,Type,Parent) %>%
     summarise(Length = sum(End-Start+1)) %>%
     spread(key=Type, value=Length)
 
-txgff_collected <- 
+txgff_longestcollected <- 
     txpartlength_mRNA %>%
     group_by(Gene) %>%
     do(txgff_frompartlength_1(.)) %>%
     mutate(Source="yeastutrgff",Score=NA,Strand="+")
 
-outfile_txgff_collected <-
+outfile_txgff_longestcollected <-
     here::here("out",
                "transcriptcentric_longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
 write_lines(
     x=c("##gff-version 3",
         paste("##source-version yeastutrgff ",lubridate::today())
         ),
-    path=outfile_txgff_collected)
-write_gff(txgff_collected,
-          path=outfile_txgff_collected,
+    path=outfile_txgff_longestcollected)
+write_gff(txgff_longestcollected,
+          path=outfile_txgff_longestcollected,
           append=TRUE)
 ```
 
@@ -772,8 +772,8 @@ write_gff(txgff_testregion_YAL10,
           append=TRUE)
 ```
 
-```{r rv_testregion_YBL72ish,dependson="gff_collected"}
-gff_testregion_YBL72ish <- gff_collected %>%
+```{r rv_testregion_YBL72ish,dependson="gff_longestcollected"}
+gff_testregion_YBL72ish <- gff_longestcollected %>%
     filter(Seqid=="chrII",
            Start > 45000, 
            End < 89500)
