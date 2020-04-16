@@ -52,11 +52,17 @@ gene_from_attr <- function(attr_string,
                            before="Name=",gene_str="[A-Z0-9-]+",after="_") {
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
-    attr_string %>%
-        str_extract(match_str) %>%
-        str_remove(before) %>%
-        str_remove(after)
+    out_strs <- attr_string %>%
+        str_extract(match_str) 
+    if (nchar(before) > 0 ){
+        out_strs <- str_remove(out_strs,before)
+    }
+    if (nchar(after) > 0 ){
+        out_strs <- str_remove(out_strs,after)
+    }
+    return(out_strs)
 }
+
 # test_bit <- gff_CDS$attr[1]
 # gene_from_attr(test_bit)
 
@@ -625,6 +631,65 @@ write_gff(gff_chromosomesMito,
 
 ```
 
+# Transcript gff with UTRs and CDS
+
+We do this here with a call to spread (sim to pivot_long), and then a sort of hand-coded spread thing by gene, which is awkward.
+
+```{r txgff_collected,dependson="gff_collected"}
+txpartlength_mRNA <- 
+    gff_collected %>%
+    filter(Seqid != "chrmt", Type %in% c("five_prime_UTR","CDS","three_prime_UTR")) %>%
+    mutate(Parent=gene_from_attr(Attr,before="Parent=",gene_str = "[\\w-_]+",after="")) %>%
+    group_by(Gene,Type,Parent) %>%
+    summarise(Length = sum(End-Start+1)) %>%
+    spread(key=Type, value=Length)
+
+txgff_frompartlength_1 <- function(partlengthdf) {
+    L_five_prime_UTR <- partlengthdf$five_prime_UTR
+    L_CDS <- partlengthdf$CDS
+    L_three_prime_UTR <- partlengthdf$three_prime_UTR
+    Parent <- partlengthdf$Parent
+    Gene <- partlengthdf$Gene
+    txgff1 <- tibble(
+        Seqid = rep(Parent,3),
+        Type = c("five_prime_UTR",
+                 "CDS",
+                 "three_prime_UTR"),
+        Start = c(1, 
+                  L_five_prime_UTR + 1, 
+                  L_five_prime_UTR + L_CDS + 1),
+        End = c( L_five_prime_UTR, 
+                 L_five_prime_UTR + L_CDS,
+                 L_five_prime_UTR + L_CDS + L_three_prime_UTR),
+        Phase = c( NA, 
+                   0,
+                   NA),
+        Attr = c(paste0("ID=",Parent,"_five_prime_UTR"),
+                 paste0("ID=",Gene,"_CDS"),
+                 paste0("ID=",Parent,"_three_prime_UTR") )
+    )
+    return(txgff1)
+}
+
+txgff_collected <- 
+    txpartlength_mRNA %>%
+    group_by(Gene) %>%
+    do(txgff_frompartlength_1(.)) %>%
+    mutate(Source="yeastutrgff",Score=NA,Strand="+")
+
+outfile_txgff_collected <-
+    here::here("out",
+               "transcriptcentric_longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
+write_lines(
+    x=c("##gff-version 3",
+        paste("##source-version yeastutrgff ",lubridate::today())
+        ),
+    path=outfile_txgff_collected)
+write_gff(txgff_collected,
+          path=outfile_txgff_collected,
+          append=TRUE)
+```
+
 
 # Test data for riboviz
 
@@ -670,6 +735,38 @@ write_gff(gff_testregion_YAL10,
 #           path=outfile_gfftestregion_YAL10CDSfixedext,
 #           append=TRUE)
 
+```
+
+```{r rv_testregion_YAL10_txgff,dependson="rv_testregion_YAL10"}
+txgff_testregion_YAL10 <- 
+    gff_testregion_YAL10 %>%
+    filter(Type=="CDS") %>%
+    mutate(Name=gene_from_attr(Attr,before="Name=",gene_str = "[\\w-_]+",after=";"),
+           Parent=gene_from_attr(Attr,before="Parent=",gene_str = "[\\w-_]+",after=";"),
+           Length=End-Start+1) %>%
+    group_by(Name) %>%
+    summarize(Seqid=unique(Parent),
+              Source="yeastutrgff",
+              Type="CDS",
+              Start=19,
+              End=sum(Length)+ 18,
+              Score=NA,
+              Strand="+",
+              Phase=0) %>%
+    mutate(Attr=paste("Name=",Name))
+
+outfile_txgfftestregion_YAL10 <-
+    here::here("out","riboviz_test",
+               "YAL10_transcriptsfixed_R64-2-1_left18_right15.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version SGD R64-2-1, 2015-01-13",
+        paste("##subset by Edward Wallace, yeastutrgff",lubridate::today())
+        ),
+    path=outfile_txgfftestregion_YAL10)
+write_gff(txgff_testregion_YAL10,
+          path=outfile_txgfftestregion_YAL10,
+          append=TRUE)
 ```
 
 ```{r rv_testregion_YBL72ish}
