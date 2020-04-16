@@ -554,6 +554,8 @@ bedtools subtract -s \
 
 FIXED: Parent of CDS should be the same tx as UTRs.
 
+## Using longest RNA from Pelechano 2013
+
 ```{r gff_longestcollected,dependson=c("load_gffs","gff_introns","load_gff_5UTRs_nointrons","gff_3UTRs")}
 gff_SGD_chromosomes_ncRNA <-
     gff_SGDall %>%
@@ -608,6 +610,56 @@ write_lines(
     path=outfile_gff_longestcollected_nochr)
 write_gff(gff_longestcollected %>% filter(Type != "chromosome"),
           path=outfile_gff_longestcollected_nochr,
+          append=TRUE)
+
+```
+
+## Using most abundant RNA isoform from Pelechano 2013
+
+```{r gff_abundantcollected,dependson=c("gff_longestcollected")}
+gff_abundantcollected_mRNA <- 
+    bind_rows( 
+        gff_allnucmRNAintrons  %>%
+            mutate(Attr = str_replace(Attr,"Name=","ID=")),
+        gff_abund5UTRs_nointrons %>%
+            mutate(Gene=gene_from_attr(Attr,before="ID=")),
+        gff_abund3UTRs %>%
+            mutate(Gene=gene_from_attr(Attr,before="ID=")),
+        gff_CDS %>% 
+            filter(str_detect(Attr,"Verified")) %>%
+            mutate(Attr = str_replace(Attr,"Name=","ID="))
+    ) %>%
+    dplyr::arrange(Seqid,Start,desc(End)) %>%
+    group_by(Gene) %>%
+    do(replace_parent(.))
+
+gff_abundantcollected <- bind_rows(gff_SGD_chromosomes_ncRNA,
+                           gff_abundantcollected_mRNA) %>%
+    dplyr::arrange(Seqid,Start,desc(End))
+
+outfile_gff_abundantcollected <-
+    here::here("out","gff_Chromosomes_ncRNAs_abundantverifiedmRNAparts.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
+    path=outfile_gff_abundantcollected)
+write_gff(gff_abundantcollected,
+          path=outfile_gff_abundantcollected,
+          append=TRUE)
+
+
+outfile_gff_abundantcollected_nochr <-
+    here::here("out","gff_ncRNAs_abundantverifiedmRNAparts.gff")
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today()),
+        "##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns"),
+    path=outfile_gff_abundantcollected_nochr)
+write_gff(gff_abundantcollected %>% filter(Type != "chromosome"),
+          path=outfile_gff_abundantcollected_nochr,
           append=TRUE)
 
 ```
@@ -693,6 +745,34 @@ write_gff(txgff_longestcollected,
           append=TRUE)
 ```
 
+```{r txgff_abundantcollected,dependson=c("gff_abundantcollected","txgff_functions")}
+txpartlength_mRNA <- 
+    gff_abundantcollected %>%
+    filter(Seqid != "chrmt", Type %in% c("five_prime_UTR","CDS","three_prime_UTR")) %>%
+    mutate(Parent=gene_from_attr(Attr,before="Parent=",gene_str = "[\\w-_]+",after="")) %>%
+    group_by(Gene,Type,Parent) %>%
+    summarise(Length = sum(End-Start+1)) %>%
+    spread(key=Type, value=Length)
+
+txgff_abundantcollected <- 
+    txpartlength_mRNA %>%
+    group_by(Gene) %>%
+    do(txgff_frompartlength_1(.)) %>%
+    mutate(Source="yeastutrgff",Score=NA,Strand="+")
+
+outfile_txgff_abundantcollected <-
+    here::here("out",
+               "transcriptcentric_abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
+write_lines(
+    x=c("##gff-version 3",
+        paste("##source-version yeastutrgff ",lubridate::today())
+        ),
+    path=outfile_txgff_abundantcollected)
+write_gff(txgff_abundantcollected,
+          path=outfile_txgff_abundantcollected,
+          append=TRUE)
+```
+
 
 # Test data for riboviz
 
@@ -772,8 +852,8 @@ write_gff(txgff_testregion_YAL10,
           append=TRUE)
 ```
 
-```{r rv_testregion_YBL72ish,dependson="gff_longestcollected"}
-gff_testregion_YBL72ish <- gff_longestcollected %>%
+```{r rv_testregion_YBL72ish,dependson="gff_abundantcollected"}
+gff_testregion_YBL72ish <- gff_abundantcollected %>%
     filter(Seqid=="chrII",
            Start > 45000, 
            End < 89500)
