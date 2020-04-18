@@ -154,6 +154,51 @@ Biostrings::writeXStringSet(
 ```
 
 
+## Make subsets containing only verified ORFs
+
+```{r filter_verifiedORFs, dependson=c("longest_etc_tx_seqs","abundant_etc_tx_seqs")}
+verifiedORFs <- 
+    here::here("data","saccharomyces_cerevisiae_R64-2-1_20150113.gff") %>%
+    read_tsv(comment="#",col_names=FALSE) %>%
+    filter(X3=="CDS", str_detect(X9,"Verified")) %>%
+    pull(X9) %>%
+    str_extract("[\\w-]+_CDS") %>%
+    unique() %>%
+    str_remove("_CDS")
+
+df_verORF_lsplicedtxs_seq <- 
+    df_lsplicedtxs_seq %>% 
+    mutate(ORF=str_extract(ID,"Y[A-Z0-9-]+")) %>%
+    filter(ORF %in% verifiedORFs)
+
+seqs_verORF_lsplicedtxs <- 
+    df_verORF_lsplicedtxs_seq$Seq %>% 
+    DNAStringSet() %>%
+    magrittr::set_names(df_verORF_lsplicedtxs_seq$ID)
+
+Biostrings::writeXStringSet(
+    seqs_verORF_lsplicedtxs, 
+    here::here("out",
+               "verifiedORF_longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
+)
+
+df_verORF_asplicedtxs_seq <- 
+    df_asplicedtxs_seq %>% 
+    mutate(ORF=str_extract(ID,"Y[A-Z0-9-]+")) %>%
+    filter(ORF %in% verifiedORFs)
+
+seqs_verORF_asplicedtxs <- 
+    df_verORF_asplicedtxs_seq$Seq %>% 
+    DNAStringSet() %>%
+    magrittr::set_names(df_verORF_asplicedtxs_seq$ID)
+
+Biostrings::writeXStringSet(
+    seqs_verORF_asplicedtxs, 
+    here::here("out",
+               "verifiedORF_abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
+)
+
+```
 
 ## Get 5'UTR sequences
 

@@ -375,6 +375,7 @@ summary {
 <li><a href="#try-with-bioconductor">Try with bioconductor</a><ul>
 <li><a href="#load-genome-fasta">Load genome fasta</a></li>
 <li><a href="#get-transcript-sequences">Get transcript sequences</a></li>
+<li><a href="#make-subsets-containing-only-verified-orfs">Make subsets containing only verified ORFs</a></li>
 <li><a href="#get-5utr-sequences">Get 5’UTR sequences</a></li>
 </ul></li>
 </ul>
@@ -496,6 +497,69 @@ Biostrings::writeXStringSet(
     seqs_asplicedtxs, 
     here::here(&quot;out&quot;,
                &quot;abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta&quot;)
+)</code></pre>
+</div>
+<div id="make-subsets-containing-only-verified-orfs" class="section level2">
+<h2>Make subsets containing only verified ORFs</h2>
+<pre class="r"><code>verifiedORFs &lt;- 
+    here::here(&quot;data&quot;,&quot;saccharomyces_cerevisiae_R64-2-1_20150113.gff&quot;) %&gt;%
+    read_tsv(comment=&quot;#&quot;,col_names=FALSE) %&gt;%
+    filter(X3==&quot;CDS&quot;, str_detect(X9,&quot;Verified&quot;)) %&gt;%
+    pull(X9) %&gt;%
+    str_extract(&quot;[\\w-]+_CDS&quot;) %&gt;%
+    unique() %&gt;%
+    str_remove(&quot;_CDS&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   X1 = col_character(),
+##   X2 = col_character(),
+##   X3 = col_character(),
+##   X4 = col_double(),
+##   X5 = col_double(),
+##   X6 = col_character(),
+##   X7 = col_character(),
+##   X8 = col_character(),
+##   X9 = col_character()
+## )</code></pre>
+<pre><code>## Warning: 151990 parsing failures.
+##   row col  expected    actual                                                                                        file
+## 23059  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23060  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23061  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23062  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23063  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## ..... ... ......... ......... ...........................................................................................
+## See problems(...) for more details.</code></pre>
+<pre class="r"><code>df_verORF_lsplicedtxs_seq &lt;- 
+    df_lsplicedtxs_seq %&gt;% 
+    mutate(ORF=str_extract(ID,&quot;Y[A-Z0-9-]+&quot;)) %&gt;%
+    filter(ORF %in% verifiedORFs)
+
+seqs_verORF_lsplicedtxs &lt;- 
+    df_verORF_lsplicedtxs_seq$Seq %&gt;% 
+    DNAStringSet() %&gt;%
+    magrittr::set_names(df_verORF_lsplicedtxs_seq$ID)
+
+Biostrings::writeXStringSet(
+    seqs_verORF_lsplicedtxs, 
+    here::here(&quot;out&quot;,
+               &quot;verifiedORF_longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta&quot;)
+)
+
+df_verORF_asplicedtxs_seq &lt;- 
+    df_asplicedtxs_seq %&gt;% 
+    mutate(ORF=str_extract(ID,&quot;Y[A-Z0-9-]+&quot;)) %&gt;%
+    filter(ORF %in% verifiedORFs)
+
+seqs_verORF_asplicedtxs &lt;- 
+    df_verORF_asplicedtxs_seq$Seq %&gt;% 
+    DNAStringSet() %&gt;%
+    magrittr::set_names(df_verORF_asplicedtxs_seq$ID)
+
+Biostrings::writeXStringSet(
+    seqs_verORF_asplicedtxs, 
+    here::here(&quot;out&quot;,
+               &quot;verifiedORF_abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta&quot;)
 )</code></pre>
 </div>
 <div id="get-5utr-sequences" class="section level2">
