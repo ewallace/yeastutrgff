@@ -30,6 +30,22 @@ library(tidyverse)
 library(here)
 ```
 
+```{r concat_seqf_function}
+concat_seqdf_startorder <- function(seqdf) {
+    ID = unique(seqdf$ID)
+    Strand = unique(seqdf$strand)
+    if( Strand == "+") {
+       seqdfarr <- 
+           dplyr::arrange(seqdf,start) 
+    } else if ( Strand == "-" ) {
+        seqdfarr <- 
+            dplyr::arrange(seqdf,desc(start))
+    }
+    tibble::tibble(Seq=paste0(seqdfarr$Seq,collapse = ""))
+}
+```
+
+
 ## Load genome fasta
 
 ```{r load_genome}
@@ -45,123 +61,99 @@ Scer_fasta <-
 ## Get transcript sequences
 
 ```{r longest_tx_seqs,dependson="load_genome"}
-granges_txs <- 
+granges_ltxs <- 
     here::here("data","longest_full-ORF_transcripts_ypd.gff3") %>%
     rtracklayer::readGFFAsGRanges() 
 
-seqs_txs <- Biostrings::getSeq(Scer_FaFile,granges_txs) %>%
-    magrittr::set_names(granges_txs$ID)
+seqs_ltxs <- Biostrings::getSeq(Scer_FaFile,granges_ltxs) %>%
+    magrittr::set_names(granges_ltxs$ID)
 
 Biostrings::writeXStringSet(
-    seqs_txs, 
+    seqs_ltxs, 
     here::here("out",
                "longest_full-ORF_transcripts_keepintrons_ypd.fasta")
 )
 ```
 
 ```{r longest_etc_tx_seqs,dependson="load_genome"}
-granges_splicedtxs <- 
+granges_lsplicedtxs <- 
     here::here("out","longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff") %>%
     rtracklayer::readGFFAsGRanges() 
 
-seqs_txexons <- Biostrings::getSeq(Scer_FaFile,granges_splicedtxs) # %>%
+seqs_ltxexons <- Biostrings::getSeq(Scer_FaFile,granges_lsplicedtxs) # %>%
     # set_names(paste(granges_splicedtxs$ID,
     #                 chrom(granges_splicedtxs),
     #                 start(granges_splicedtxs),
     #                 sep="_")
     # )
 
-concat_seqdf_startorder <- function(seqdf) {
-    ID = unique(seqdf$ID)
-    Strand = unique(seqdf$strand)
-    if( Strand == "+") {
-       seqdfarr <- 
-           dplyr::arrange(seqdf,start) 
-    } else if ( Strand == "-" ) {
-        seqdfarr <- 
-            dplyr::arrange(seqdf,desc(start))
-    }
-    tibble::tibble(Seq=paste0(seqdfarr$Seq,collapse = ""))
-}
-
-df_splicedtxs <- granges_splicedtxs %>%
+df_lsplicedtxs <- granges_lsplicedtxs %>%
     as.data.frame() %>% 
     tibble::as_tibble() %>%
-    dplyr::mutate(Seq = as.character(seqs_txexons))
+    dplyr::mutate(Seq = as.character(seqs_ltxexons))
 
 # debug(concat_seqdf_startorder)
 # df_splicedtx %>% dplyr::filter(ID=="YAL001C_tx0") %>% concat_seqdf_startorder
 # df_splicedtx %>% dplyr::filter(ID=="YAL038W_id004") %>% concat_seqdf_startorder
 # df_splicedtx %>% dplyr::filter(ID=="YIL123W_id002") %>% concat_seqdf_startorder
 
-df_splicedtxs_seq <- 
-    df_splicedtxs %>%
+df_lsplicedtxs_seq <- 
+    df_lsplicedtxs %>%
     dplyr::group_by(ID) %>%
     dplyr::do(concat_seqdf_startorder(.))
 
-seqs_splicedtxs <- 
-    df_splicedtxs_seq$Seq %>% 
+seqs_lsplicedtxs <- 
+    df_lsplicedtxs_seq$Seq %>% 
     DNAStringSet() %>%
-    magrittr::set_names(df_splicedtxs_seq$ID)
+    magrittr::set_names(df_lsplicedtxs_seq$ID)
 
 Biostrings::writeXStringSet(
-    seqs_splicedtxs, 
+    seqs_lsplicedtxs, 
     here::here("out",
                "longest_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
 )
 ```
 
 ```{r abundant_etc_tx_seqs,dependson="load_genome"}
-granges_splicedtxs <- 
+granges_asplicedtxs <- 
     here::here("out","abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.gff") %>%
     rtracklayer::readGFFAsGRanges() 
 
-seqs_txexons <- Biostrings::getSeq(Scer_FaFile,granges_splicedtxs) # %>%
+seqs_atxexons <- Biostrings::getSeq(Scer_FaFile,granges_asplicedtxs) # %>%
     # set_names(paste(granges_splicedtxs$ID,
     #                 chrom(granges_splicedtxs),
     #                 start(granges_splicedtxs),
     #                 sep="_")
     # )
 
-concat_seqdf_startorder <- function(seqdf) {
-    ID = unique(seqdf$ID)
-    Strand = unique(seqdf$strand)
-    if( Strand == "+") {
-       seqdfarr <- 
-           dplyr::arrange(seqdf,start) 
-    } else if ( Strand == "-" ) {
-        seqdfarr <- 
-            dplyr::arrange(seqdf,desc(start))
-    }
-    tibble::tibble(Seq=paste0(seqdfarr$Seq,collapse = ""))
-}
-
-df_splicedtxs <- granges_splicedtxs %>%
+df_asplicedtxs <- granges_asplicedtxs %>%
     as.data.frame() %>% 
     tibble::as_tibble() %>%
-    dplyr::mutate(Seq = as.character(seqs_txexons))
+    dplyr::mutate(Seq = as.character(seqs_atxexons))
 
 # debug(concat_seqdf_startorder)
 # df_splicedtx %>% dplyr::filter(ID=="YAL001C_tx0") %>% concat_seqdf_startorder
 # df_splicedtx %>% dplyr::filter(ID=="YAL038W_id004") %>% concat_seqdf_startorder
 # df_splicedtx %>% dplyr::filter(ID=="YIL123W_id002") %>% concat_seqdf_startorder
 
-df_splicedtxs_seq <- 
-    df_splicedtxs %>%
+df_asplicedtxs_seq <- 
+    df_asplicedtxs %>%
     dplyr::group_by(ID) %>%
     dplyr::do(concat_seqdf_startorder(.))
 
-seqs_splicedtxs <- 
-    df_splicedtxs_seq$Seq %>% 
+seqs_asplicedtxs <- 
+    df_asplicedtxs_seq$Seq %>% 
     DNAStringSet() %>%
-    magrittr::set_names(df_splicedtxs_seq$ID)
+    magrittr::set_names(df_asplicedtxs_seq$ID)
 
 Biostrings::writeXStringSet(
-    seqs_splicedtxs, 
+    seqs_asplicedtxs, 
     here::here("out",
                "abundant_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts_nointrons.fasta")
 )
 ```
+
+
 
 ## Get 5'UTR sequences
 
@@ -180,9 +172,4 @@ Biostrings::writeXStringSet(
 )
 ```
 
-# To do:
-
-* Make longest or alternately fixed-length-UTR transcript seqs.
-* Make transcripts with introns removed?
-* Make a version with just spliced 5'UTRs?
 
