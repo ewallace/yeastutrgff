@@ -373,6 +373,7 @@ summary {
 <ul>
 <li><a href="#functions-to-read-write-manipulate-gffs">Functions to read, write, manipulate gffs</a></li>
 <li><a href="#load-data-from-gffs">Load data from gffs</a><ul>
+<li><a href="#list-of-verified-nuclear-orf-names-only">List of verified nuclear ORF names only</a></li>
 <li><a href="#which-genes-have-5utr-introns-which-have-longest-annotations">Which genes have 5’UTR introns? Which have longest annotations?</a></li>
 </ul></li>
 <li><a href="#join-cds-annotation">Join CDS annotation</a></li>
@@ -381,7 +382,9 @@ summary {
 <li><a href="#remove-introns-from-5utrs-using-bedtools">Remove introns from 5’UTRs using bedtools</a></li>
 </ul></li>
 <li><a href="#cdss-with-default-length-25nt-5utrs-and-125nt-3utrs">CDSs with default-length 25nt 5UTRs and 125nt 3’UTRs</a><ul>
-<li><a href="#now-make-transcripts-which-are-longest-if-we-have-data-fixed-length-if-we-dont">Now make transcripts which are longest if we have data, fixed-length if we don’t</a></li>
+<li><a href="#make-transcripts-which-are-longest-isoforms-if-we-have-data-fixed-length-if-we-dont">Make transcripts which are longest isoforms if we have data, fixed-length if we don’t</a></li>
+<li><a href="#make-transcripts-which-are-abundant-isoforms-if-we-have-data-fixed-length-if-we-dont">Make transcripts which are abundant isoforms if we have data, fixed-length if we don’t</a></li>
+<li><a href="#verified-orfs-only-make-transcripts-which-are-abundant-isoforms-if-we-have-data-fixed-length-if-we-dont">Verified ORFs only: Make transcripts which are abundant isoforms if we have data, fixed-length if we don’t</a></li>
 <li><a href="#remove-introns-from-cds">Remove introns from CDS?</a></li>
 <li><a href="#remove-introns-from-longest-transcripts-using-bedtools">Remove introns from longest transcripts using bedtools</a></li>
 </ul></li>
@@ -618,11 +621,11 @@ replace_parent &lt;- function(df,niceType=&quot;five_prime_UTR&quot;) {
     read_gff()</code></pre>
 <pre><code>## Warning: 151990 parsing failures.
 ##   row col  expected    actual                                                                                        file
-## 23059  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23060  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23061  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23062  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
-## 23063  -- 9 columns 1 columns '/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff'
+## 23059  -- 9 columns 1 columns &#39;/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff&#39;
+## 23060  -- 9 columns 1 columns &#39;/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff&#39;
+## 23061  -- 9 columns 1 columns &#39;/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff&#39;
+## 23062  -- 9 columns 1 columns &#39;/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff&#39;
+## 23063  -- 9 columns 1 columns &#39;/Users/edwardwallace/Repos/yeastutrgff/data/saccharomyces_cerevisiae_R64-2-1_20150113.gff&#39;
 ## ..... ... ......... ......... ...........................................................................................
 ## See problems(...) for more details.</code></pre>
 <pre class="r"><code>gff_CDS &lt;- 
@@ -644,6 +647,14 @@ gff_abundtxs &lt;-
     here::here(&quot;data&quot;,&quot;most_abundant_full-ORF_transcripts_ypd.gff3&quot;) %&gt;%
     read_gff() %&gt;%
     mutate(Gene = gene_from_attr(Attr,before=&quot;ID=&quot;)) </code></pre>
+<div id="list-of-verified-nuclear-orf-names-only" class="section level3">
+<h3>List of verified nuclear ORF names only</h3>
+<pre class="r"><code>verified_nuclear_ORF_names &lt;- 
+    gff_CDS %&gt;%
+    filter( Seqid != &quot;chrmt&quot;, str_detect(Attr,&quot;Verified&quot;)) %&gt;%
+    pull(Gene) %&gt;%
+    unique()</code></pre>
+</div>
 <div id="which-genes-have-5utr-introns-which-have-longest-annotations" class="section level2">
 <h2>Which genes have 5’UTR introns? Which have longest annotations?</h2>
 <p>We need to address 5’UTR introns in particular becase several genes of interest (ribosomal proteins and Ssd1 targets) have 5’UTR introns, and we want to get their sequences right.</p>
@@ -835,8 +846,8 @@ write_lines(
 write_gff(x=gff_verCDSext,
           path=outfile_CDSext,
           append=TRUE)</code></pre>
-<div id="now-make-transcripts-which-are-longest-if-we-have-data-fixed-length-if-we-dont" class="section level2">
-<h2>Now make transcripts which are longest if we have data, fixed-length if we don’t</h2>
+<div id="make-transcripts-which-are-longest-isoforms-if-we-have-data-fixed-length-if-we-dont" class="section level2">
+<h2>Make transcripts which are longest isoforms if we have data, fixed-length if we don’t</h2>
 <pre class="r"><code>genes_verified_no_longesttx &lt;- 
     setdiff(gff_verCDSext$Gene,gff_txs$Gene)
 
@@ -861,6 +872,9 @@ write_lines(
 write_gff(x=gff_longest_or_CDSext,
           path=outfile_longest_or_CDSext,
           append=TRUE)</code></pre>
+</div>
+<div id="make-transcripts-which-are-abundant-isoforms-if-we-have-data-fixed-length-if-we-dont" class="section level2">
+<h2>Make transcripts which are abundant isoforms if we have data, fixed-length if we don’t</h2>
 <pre class="r"><code>genes_verified_no_abundanttx &lt;- 
     setdiff(gff_verCDSext$Gene,gff_txs$Gene)
 
@@ -886,6 +900,31 @@ write_gff(x=gff_abundant_or_CDSext,
           path=outfile_abundant_or_CDSext,
           append=TRUE)</code></pre>
 </div>
+<div id="verified-orfs-only-make-transcripts-which-are-abundant-isoforms-if-we-have-data-fixed-length-if-we-dont" class="section level2">
+<h2>Verified ORFs only: Make transcripts which are abundant isoforms if we have data, fixed-length if we don’t</h2>
+<pre class="r"><code>gff_verified_abundant_or_CDSext &lt;- 
+    bind_rows(gff_abundtxs  %&gt;% 
+                  filter( Gene %in% verified_nuclear_ORF_names),
+              gff_verCDSext %&gt;% 
+                  filter(
+                     Gene %in% genes_verified_no_abundanttx)
+              ) %&gt;% 
+    arrange(Gene)
+
+outfile_verified_abundant_or_CDSext &lt;- here::here(
+    &quot;out&quot;,
+    &quot;abundant_verified_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff&quot;)
+
+write_lines(
+    x=c(&quot;##gff-version 3&quot;, 
+        &quot;##source-version yeastutrgff&quot;,
+        paste(&quot;##date&quot;,lubridate::today())),
+    path=outfile_verified_abundant_or_CDSext)
+
+write_gff(x=gff_verified_abundant_or_CDSext,
+          path=outfile_verified_abundant_or_CDSext,
+          append=TRUE)</code></pre>
+</div>
 <div id="remove-introns-from-cds" class="section level2">
 <h2>Remove introns from CDS?</h2>
 <pre class="r"><code>gff_allnucmRNAintrons &lt;- 
@@ -899,7 +938,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##all introns from nuclear chromosome mRNAs, including 5'UTR introns&quot;),
+        &quot;##all introns from nuclear chromosome mRNAs, including 5&#39;UTR introns&quot;),
     path=outfile_nucmRNA_introns)
 write_gff(gff_allnucmRNAintrons,
           path=outfile_nucmRNA_introns,
@@ -959,7 +998,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+        &quot;##selected features: chromosomes, ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;),
     path=outfile_gff_longestcollected)
 write_gff(gff_longestcollected,
           path=outfile_gff_longestcollected,
@@ -972,7 +1011,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+        &quot;##selected features: ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;),
     path=outfile_gff_longestcollected_nochr)
 write_gff(gff_longestcollected %&gt;% filter(Type != &quot;chromosome&quot;),
           path=outfile_gff_longestcollected_nochr,
@@ -1006,7 +1045,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##selected features: chromosomes, ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+        &quot;##selected features: chromosomes, ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;),
     path=outfile_gff_abundantcollected)
 write_gff(gff_abundantcollected,
           path=outfile_gff_abundantcollected,
@@ -1019,7 +1058,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;),
+        &quot;##selected features: ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;),
     path=outfile_gff_abundantcollected_nochr)
 write_gff(gff_abundantcollected %&gt;% filter(Type != &quot;chromosome&quot;),
           path=outfile_gff_abundantcollected_nochr,
@@ -1034,7 +1073,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version yeastutrgff&quot;,
         paste(&quot;##date&quot;,lubridate::today()),
-        &quot;##selected features: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;,
+        &quot;##selected features: ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;,
         &quot;##workaround for featureCounts putting feature type in attr&quot;),
     path=outfile_gff_longestcollected_nochr_workaround)
 write_gff(gff_longestcollected %&gt;% 
@@ -1202,7 +1241,7 @@ write_lines(
     x=c(&quot;##gff-version 3&quot;, 
         &quot;##source-version SGD R64-2-1, 2015-01-13&quot;,
         paste(&quot;##source-version yeastutrgff&quot;,lubridate::today()),
-        &quot;##subset by Edward Wallace: ncRNA, CDS, 5'UTRs, 3'UTRs, introns&quot;
+        &quot;##subset by Edward Wallace: ncRNA, CDS, 5&#39;UTRs, 3&#39;UTRs, introns&quot;
         ),
     path=outfile_gfftestregion_YBL72ish)
 write_gff(gff_testregion_YBL72ish,

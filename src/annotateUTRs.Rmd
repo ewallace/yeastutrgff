@@ -265,6 +265,17 @@ gff_abundtxs <-
     mutate(Gene = gene_from_attr(Attr,before="ID=")) 
 ```
 
+### List of verified nuclear ORF names only
+
+```{r verified_ORF_names,dependson="load_gffs"}
+verified_nuclear_ORF_names <- 
+    gff_CDS %>%
+    filter( Seqid != "chrmt", str_detect(Attr,"Verified")) %>%
+    pull(Gene) %>%
+    unique()
+```
+
+
 ## Which genes have 5'UTR introns? Which have longest annotations?
 
 We need to address 5'UTR introns in particular becase several genes of interest (ribosomal proteins and Ssd1 targets) have 5'UTR introns, and we want to get their sequences right.
@@ -459,7 +470,7 @@ write_gff(x=gff_verCDSext,
           append=TRUE)
 ```
 
-## Now make transcripts which are longest if we have data, fixed-length if we don't
+## Make transcripts which are longest isoforms if we have data, fixed-length if we don't
 
 ```{r gff_longest_or_CDSext,dependson="gff_CDS_extend"}
 genes_verified_no_longesttx <- 
@@ -488,6 +499,8 @@ write_gff(x=gff_longest_or_CDSext,
           append=TRUE)
 ```
 
+## Make transcripts which are abundant isoforms if we have data, fixed-length if we don't
+
 ```{r gff_abundant_or_CDSext,dependson="gff_CDS_extend"}
 genes_verified_no_abundanttx <- 
     setdiff(gff_verCDSext$Gene,gff_txs$Gene)
@@ -512,6 +525,33 @@ write_lines(
 
 write_gff(x=gff_abundant_or_CDSext,
           path=outfile_abundant_or_CDSext,
+          append=TRUE)
+```
+
+## Verified ORFs only: Make transcripts which are abundant isoforms if we have data, fixed-length if we don't
+
+```{r gff_verified_abundant_or_CDSext,dependson=c("verified_ORF_names","gff_abundant_or_CDSext")}
+gff_verified_abundant_or_CDSext <- 
+    bind_rows(gff_abundtxs  %>% 
+                  filter( Gene %in% verified_nuclear_ORF_names),
+              gff_verCDSext %>% 
+                  filter(
+                     Gene %in% genes_verified_no_abundanttx)
+              ) %>% 
+    arrange(Gene)
+
+outfile_verified_abundant_or_CDSext <- here::here(
+    "out",
+    "abundant_verified_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff")
+
+write_lines(
+    x=c("##gff-version 3", 
+        "##source-version yeastutrgff",
+        paste("##date",lubridate::today())),
+    path=outfile_verified_abundant_or_CDSext)
+
+write_gff(x=gff_verified_abundant_or_CDSext,
+          path=outfile_verified_abundant_or_CDSext,
           append=TRUE)
 ```
 
